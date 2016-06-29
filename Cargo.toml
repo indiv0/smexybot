@@ -9,8 +9,11 @@ optional = true
 version = "0.8.19"
 
 [dependencies]
+byteorder = { optional = true, version = "0.5.3" }
 clippy = { optional = true, version = "0.0" }
+cpal = { optional = true, version = "0.4.1" }
 env_logger = "0.3.5"
+futures = { optional = true, version = "0.1.6" }
 hyper = "0.9.14"
 lazy_static = "0.2.2"
 log = "0.3.6"
@@ -39,13 +42,14 @@ optional = true
 version = "0.2.1"
 
 [features]
-all = ["fuyu", "ping", "roll", "wolfram", "xkcd"]
+all = ["fuyu", "ping", "roll", "voice", "wolfram", "xkcd"]
 default = ["with-syntex"]
 fuyu = ["markov"]
 fuyu-include = ["fuyu"]
 ping = []
 roll = []
 wolfram = ["wolfram_alpha"]
+voice = ["byteorder", "cpal", "futures"]
 nightly = ["serde_derive", "wolfram_alpha/nightly", "xkcd/nightly"]
 nightly-testing = [
     "clippy",

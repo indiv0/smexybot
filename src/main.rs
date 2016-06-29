@@ -125,6 +125,12 @@ fn build_framework(framework: Framework) -> Framework {
     {
         framework = framework.on("roll", command::roll::handler);
     }
+    #[cfg(feature = "voice")]
+    {
+        framework = framework.on("join", command::voice::join);
+        framework = framework.on("listen", command::voice::listen);
+        framework = framework.on("unlisten", command::voice::unlisten);
+    }
     #[cfg(feature = "wolfram")]
     {
         framework = framework.on("wolfram", command::wolfram_alpha::handler);

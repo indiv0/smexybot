@@ -11,6 +11,8 @@
 pub mod fuyu;
 #[cfg(feature = "roll")]
 pub mod roll;
+#[cfg(feature = "voice")]
+pub mod voice;
 #[cfg(feature = "wolfram")]
 pub mod wolfram_alpha;
 #[cfg(feature = "xkcd")]
