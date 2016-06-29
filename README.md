@@ -15,8 +15,7 @@
 </table>
 
 Smexybot is a general-purpose [Discord][discord] bot written in
-[Rust][rust-lang]. It is built upon the [tumult][tumult] bot plugin framework,
-so Smexybot is easily extensible through the use of plugins.
+[Rust][rust-lang]. It is built upon the [serenity.rs][serenity-rs] Discord API.
 
 # Table of Contents
 
@@ -95,19 +94,6 @@ Interacting with Smexybot is done via commands. Commands may be performed by DM,
 or by `@mention`ing the bot in a text channel on a server on which the bot is
 present.
 
-Currently, Smexybot only supports two commands internally. Support for any other
-commands is provided by plugins.
-
-### `!test`
-
-Prints a reply text in the text channel. Intended for debugging purposes, mainly
-for determing whether or not the bot is reacting to commands.
-
-### `!quit`
-
-Tells to bot to stop monitoring for new events and to logout from the Discord
-REST API.
-
 ## Plugins
 
 **Coming soon!**
@@ -123,8 +109,8 @@ Please read [CONTRIBUTING.md][contributing] before you start contributing.
 ## Credits
 
 Smexybot and it's constituent components and plugins are built primarily using
-the excellent [`discord-rs`][discord-rs] framework by
-[SpaceManiac][spacemaniac].
+the excellent [`serenity.rs`][serenity-rs] framework by
+[zeyla][zeyla].
 
 The list of contributors to this project can be found at
 [CONTRIBUTORS.md][contributors].
@@ -142,12 +128,12 @@ See [LICENSE-APACHE][license-apache], and [LICENSE-MIT][license-mit] for details
 [contributors]: https://github.com/indiv0/smexybot/blob/master/CONTRIBUTORS.md "List of Contributors"
 [discord]: https://discordapp.com/
 [discord-invite]: https://discord.gg/qXwhun5
-[discord-rs]: https://github.com/SpaceManiac/discord-rs
 [env-example]: https://github.com/indiv0/smexybot/blob/master/.env.example
 [license-apache]: https://github.com/indiv0/smexybot/blob/master/LICENSE-APACHE "Apache-2.0 License"
 [license-mit]: https://github.com/indiv0/smexybot/blob/master/LICENSE-MIT "MIT License"
 [my-applications]: https://discordapp.com/developers/applications/me
 [new-issue]: https://github.com/indiv0/smexybot/issues/new
 [rust-lang]: https://www.rust-lang.org/
-[spacemaniac]: https://github.com/SpaceManiac
+[serenity-rs]: https://github.com/zeyla/serenity-rs
 [tumult]: https://github.com/indiv0/tumult
+[zeyla]: https://github.com/zeyla

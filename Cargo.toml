@@ -2,19 +2,55 @@
 name = "smexybot"
 version = "0.1.0"
 authors = ["Nikita Pekin <contact@nikitapek.in>"]
+build = "build.rs"
+
+[build-dependencies.serde_codegen]
+optional = true
+version = "0.8.19"
 
 [dependencies]
-discord = { git = "https://github.com/SpaceManiac/discord-rs" }
-env_logger = "0.3.3"
+clippy = { optional = true, version = "0.0" }
+env_logger = "0.3.5"
+hyper = "0.9.14"
+lazy_static = "0.2.2"
 log = "0.3.6"
+markov = { optional = true, version = "0.0.32" }
+rand = "0.3.15"
+regex = "0.1.80"
+serde = "0.8.19"
+serde_derive = { optional = true, version = "0.8.19" }
+serde_json = "0.8.4"
+url = "1.2.3"
 
-[dependencies.clippy]
+[dependencies.serenity]
+features = ["cache", "framework", "methods", "voice"]
+version = "0.1.2"
+
+[dependencies.wolfram_alpha]
+default-features = false
+features = ["hyper"]
 optional = true
-version = "0.0"
+version = "0.2.0"
+
+[dependencies.xkcd]
+default-features = false
+features = ["hyper"]
+optional = true
+version = "0.2.1"
 
 [features]
-nightly = []
+all = ["fuyu", "ping", "roll", "wolfram", "xkcd"]
+default = ["with-syntex"]
+fuyu = ["markov"]
+fuyu-include = ["fuyu"]
+ping = []
+roll = []
+wolfram = ["wolfram_alpha"]
+nightly = ["serde_derive", "wolfram_alpha/nightly", "xkcd/nightly"]
 nightly-testing = [
     "clippy",
     "nightly",
+    "wolfram_alpha/nightly-testing",
+    "xkcd/nightly-testing",
 ]
+with-syntex = ["serde_codegen", "wolfram_alpha/with-syntex", "xkcd/with-syntex"]
