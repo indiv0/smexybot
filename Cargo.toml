@@ -1,0 +1,20 @@
+[package]
+name = "smexybot"
+version = "0.1.0"
+authors = ["Nikita Pekin <contact@nikitapek.in>"]
+
+[dependencies]
+discord = { git = "https://github.com/SpaceManiac/discord-rs" }
+env_logger = "0.3.3"
+log = "0.3.6"
+
+[dependencies.clippy]
+optional = true
+version = "0.0"
+
+[features]
+nightly = []
+nightly-testing = [
+    "clippy",
+    "nightly",
+]
