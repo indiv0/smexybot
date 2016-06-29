@@ -8,7 +8,7 @@
     <tr>
         <td colspan="2">
             <a href="https://crates.io/crates/smexybot" title="Crates.io"><img src="https://img.shields.io/crates/v/smexybot.svg" alt="crates-io"></img></a>
-            <a href="#License" title="License: MIT/Apache-2.0"><img src="https://img.shields.io/crates/l/smexybot.svg" alt="license-badge"></img></a>
+            <a href="#license" title="License: MIT/Apache-2.0"><img src="https://img.shields.io/crates/l/smexybot.svg" alt="license-badge"></img></a>
             <a href="https://coveralls.io/github/indiv0/smexybot?branch=master" title="Coverage Status"><img src="https://coveralls.io/repos/github/indiv0/smexybot/badge.svg?branch=master" alt="coveralls-badge"></img></a>
         </td>
     </tr>
