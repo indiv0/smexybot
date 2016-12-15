@@ -99,6 +99,8 @@ fn build_framework(framework: Framework) -> Framework {
             command_name,
             message.author.name,
         );
+
+        true
     })
     .after(|_context, _message, command_name, error| {
         if let Err(err) = error {
