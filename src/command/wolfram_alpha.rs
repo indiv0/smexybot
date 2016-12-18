@@ -70,12 +70,11 @@ impl WolframPlugin {
     }
 }
 
-pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
+pub fn handler(context: &Context, message: &Message, args: Vec<String>)
     -> Result<(), String>
 {
-    let channel_id = context.channel_id.expect("Failed to retrieve channel ID from context");
     // TODO: handle this properly.
-    if let Err(err) = context.broadcast_typing(channel_id) {
+    if let Err(err) = context.broadcast_typing(message.channel_id) {
         return Err(format!("{:?}", err));
     }
 
@@ -84,10 +83,49 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
             if query_result.success {
                 // Format the `QueryResult` into Discord-ready output.
                 let colour = random_colour();
+                // TODO: get rid of the unwrap here.
+                let pods = query_result.pod.unwrap();
                 check_msg(context.send_message(
-                    channel_id,
-                    |m| m.embed(|e| format_pods(&query_result.pod, e).colour(colour)),
+                    message.channel_id,
+                    |m| m.embed(|e| format_pods(&pods, e).colour(colour)),
                 ));
+            } else if let Some(didyoumeans) = query_result.didyoumeans {
+                    let colour = random_colour();
+                    check_msg(context.send_message(
+                        message.channel_id,
+                        |m| m.embed(|e| e
+                            .title("Query unsuccessful.")
+                            .colour(colour)
+                            .field(|f| {
+                                let field = f.name("Did you mean:");
+
+                                let mut description = String::new();
+                                for item in &didyoumeans.didyoumean {
+                                    description.push_str(&format!("* {}\n", item.value));
+                                }
+                                field.value(description.as_str())
+                            })
+                        ),
+                    ));
+            } else if let Some(error) = query_result.error {
+                    let colour = random_colour();
+                    check_msg(context.send_message(
+                        message.channel_id,
+                        |m| m.embed(|e| e
+                            .title("Wolfram|Alpha returned an error.")
+                            .colour(colour)
+                            .field(|f| {
+                                let field = f.name("Error");
+
+                                let description = format!(
+                                    "Code: {}\nMessage: {}",
+                                    error.code,
+                                    error.msg,
+                                );
+                                field.value(description.as_str())
+                            })
+                        ),
+                    ));
             } else {
                 check_msg(context.say("Query was unsuccessful. Perhaps try rewording it?"));
             }
@@ -114,11 +152,9 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
 
     // TODO: first re-upload the image to an image host, prior the setting the
     // URL.
-    /*
-    if let Some(img) = pods.iter().filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next()).next() {
-        embed = embed.image(|i| i.url(img.src.as_str()));
+    if let Some(img) = pods.iter().skip(1).filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next()).next() {
+        embed = embed.image(|i| i.url(unescape(img.src.as_str()).as_ref()));
     }
-    */
 
     // If there is a primary pod, then only format and print that pod.
     if let Some(pod) = pods.iter().find(|p| p.primary == Some(true)) {
@@ -140,8 +176,13 @@ fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
     let mut result = String::new();
     for subpod in &pod.subpod {
         let text = match subpod.plaintext {
+            // If the text field is empty, add a message indicating as such
+            // (discord doesn't like empty/just newline fields).
+            Some(ref text) if text == "" || text == "\n" => {
+                "[No text]".to_owned()
+            },
             // Grab all the consecutive blobs of text.
-            Some(ref text) if text != "" => {
+            Some(ref text) => {
                 trace!("Adding text: {}", text);
                 text.to_owned()
             },
