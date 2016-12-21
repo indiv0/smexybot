@@ -64,7 +64,7 @@ use serenity::model::Message;
 use util::check_msg;
 
 // The prefix to search for when looking for commands in messages.
-const COMMAND_PREFIX: &'static str = "!";
+const COMMAND_PREFIX: &'static str = ";";
 // The ID of the author of the bot.
 const AUTHOR_ID: u64 = 117530756263182344;
 
