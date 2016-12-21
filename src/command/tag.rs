@@ -9,7 +9,6 @@
 
 //! Provides functionality for the `tag` command.
 
-extern crate chrono;
 extern crate uuid;
 
 use std::collections::HashMap;
@@ -17,15 +16,15 @@ use std::fs::{self, File};
 use std::io::{ErrorKind, Read, Write};
 use std::sync::Mutex;
 
-use self::chrono::{DateTime, UTC};
+use chrono::{DateTime, UTC};
 use self::uuid::Uuid;
 use serde_json;
 use serenity::client::{rest, Context};
 use serenity::model::{GuildId, Message, UserId};
 use serenity::utils::builder::CreateEmbed;
 
-use util::{check_msg, merge};
-use ::AUTHOR_ID;
+use ::CONFIG;
+use util::{check_msg, merge, timestamp_to_string};
 
 lazy_static! {
     // TODO: ensure this doesn't get loaded lazily (compared to the bot).
@@ -82,8 +81,7 @@ impl Tag {
                 }
                 a
             })
-            // TODO: move this format string to a constant.
-            .timestamp(format!("{}", self.created_at.format("%Y-%m-%dT%H:%M:%SZ")))
+            .timestamp(timestamp_to_string(&self.created_at))
             .footer(|f| f
                 .text(
                     if self.is_generic() {
@@ -438,7 +436,7 @@ fn verify_tag_name(name: &str) -> Result<(), String> {
 }
 
 fn owner_check(message: &Message, tag: &Tag) -> bool {
-    message.author.id == AUTHOR_ID ||
+    CONFIG.owners.contains(&message.author.id.0) ||
         message.author.id == tag.owner_id
 }
 

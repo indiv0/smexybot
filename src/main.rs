@@ -34,6 +34,7 @@
 //! in [Rust](https://www.rust-lang.org/). It is built upon the
 //! [serenity.rs](https://github.com/zeyla/serenity.rs) Discord API.
 
+extern crate chrono;
 extern crate env_logger;
 extern crate hyper;
 #[cfg(any(feature = "roll", feature = "wolfram", feature = "xkcd"))]
@@ -51,26 +52,31 @@ extern crate serenity;
 extern crate url;
 
 mod command;
+mod config;
 mod error;
 mod util;
 
 use std::env;
 
+use chrono::{DateTime, UTC};
 use serenity::Client;
-use serenity::client::{Context, LoginType};
+use serenity::client::LoginType;
 use serenity::ext::framework::Framework;
-use serenity::model::Message;
 
-use util::check_msg;
+use config::Config;
+use util::{check_msg, timestamp_to_string};
 
-// The prefix to search for when looking for commands in messages.
-const COMMAND_PREFIX: &'static str = ";";
-// The ID of the author of the bot.
-const AUTHOR_ID: u64 = 117530756263182344;
+lazy_static! {
+    static ref CONFIG: Config = Config::new(Some("config.json"));
+    static ref UPTIME: DateTime<UTC> = UTC::now();
+}
 
 fn main() {
     // Initialize the `env_logger` to provide logging output.
     env_logger::init().expect("Failed to initialize env_logger");
+
+    // Initialize the `UPTIME` variable.
+    debug!("Initialized at: {}", timestamp_to_string(&*UPTIME));
 
     // Create a client for a user.
     let (_, mut client) = login();
@@ -94,7 +100,7 @@ fn main() {
 // any enabled commands.
 fn build_framework(framework: Framework) -> Framework {
     let mut framework = framework.configure(|c| c
-        .prefix(COMMAND_PREFIX))
+        .prefix(&CONFIG.command_prefix))
     .before(|_context, message, command_name| {
         debug!(
             "Got command '{}' from user '{}'",
@@ -118,14 +124,15 @@ fn build_framework(framework: Framework) -> Framework {
     }
     #[cfg(feature = "ping")]
     {
-        framework = framework.command("ping", |c| c
-            .check(owner_check)
-            .exec_str("Pong!")
-        );
+        framework = framework.on("ping", command::ping::handler);
     }
     #[cfg(feature = "roll")]
     {
         framework = framework.on("roll", command::roll::handler);
+    }
+    #[cfg(feature = "stats")]
+    {
+        framework = framework.on("stats", command::stats::handler);
     }
     #[cfg(feature = "tag")]
     {
@@ -141,10 +148,6 @@ fn build_framework(framework: Framework) -> Framework {
     }
 
     framework
-}
-
-fn owner_check(_: &Context, message: &Message) -> bool {
-    message.author.id == AUTHOR_ID
 }
 
 // Creates a `Client`.

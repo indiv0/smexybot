@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use chrono::{DateTime, Duration, UTC};
 use rand::{self, Rng};
 use serenity::Result as SerenityResult;
 use serenity::model::Message;
@@ -54,4 +55,39 @@ pub fn merge<K: Hash + Eq, V>(first: HashMap<K, V>, second: HashMap<K, V>)
         merged.insert(key, value);
     }
     merged
+}
+
+/// Returns the specified `DateTime<UTC>` as a Discord-compatible ISO 8601
+/// `String`.
+#[inline]
+pub fn timestamp_to_string(timestamp: &DateTime<UTC>) -> String {
+    format!("{}", timestamp.format("%Y-%m-%dT%H:%M:%SZ"))
+}
+
+/// Returns the specified `Duration` as a `String` in the format "HH:MM:SS"
+#[inline]
+pub fn duration_to_string(duration: &Duration) -> String {
+    let days = duration.num_days();
+    let hours = if days > 0 {
+        duration.num_hours() % 24
+    } else {
+        duration.num_hours()
+    };
+    let minutes = if hours > 0 {
+        duration.num_minutes() % 60
+    } else {
+        duration.num_minutes()
+    };
+    let seconds = if minutes > 0 {
+        duration.num_seconds() % 60
+    } else {
+        duration.num_seconds()
+    };
+    format!(
+        "{}d {}h {}m {}s",
+        days,
+        hours,
+        minutes,
+        seconds,
+    )
 }

@@ -9,6 +9,8 @@ mod inner {
         let out_dir = env::var_os("OUT_DIR").unwrap();
 
         for &(src, dst) in &[
+            ("src/config.in.rs", "config.rs"),
+            ("src/command/tags.in.rs", "tags.rs"),
             ("src/command/xkcd.in.rs", "xkcd.rs"),
         ] {
             let src = Path::new(src);

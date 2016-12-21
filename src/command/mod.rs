@@ -9,8 +9,12 @@
 
 #[cfg(feature = "fuyu")]
 pub mod fuyu;
+#[cfg(feature = "ping")]
+pub mod ping;
 #[cfg(feature = "roll")]
 pub mod roll;
+#[cfg(feature = "stats")]
+pub mod stats;
 #[cfg(feature = "tag")]
 pub mod tag;
 #[cfg(feature = "wolfram")]

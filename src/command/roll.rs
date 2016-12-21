@@ -25,6 +25,7 @@ lazy_static! {
 pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
     -> Result<(), String>
 {
+    // TODO: add a notice regarding max X and Y values.
     const ERROR_MESSAGE: &'static str = "Please specify a roll in the form XdY (e.g. 2d6)";
 
     trace!("Received roll command with args: {:?}", args);
