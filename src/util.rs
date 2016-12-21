@@ -7,6 +7,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+use std::collections::HashMap;
+use std::hash::Hash;
+
 use rand::{self, Rng};
 use serenity::Result as SerenityResult;
 use serenity::model::Message;
@@ -35,4 +38,20 @@ pub fn check_msg(result: SerenityResult<Message>) {
 pub fn random_colour() -> Colour {
     let mut rng = rand::thread_rng();
     Colour::new(rng.gen_range::<u32>(0, 0xFFFFFF + 1))
+}
+
+/// Takes two `HashMap`s, merges them together, and returns the result.
+#[inline]
+pub fn merge<K: Hash + Eq, V>(first: HashMap<K, V>, second: HashMap<K, V>)
+        -> HashMap<K, V>
+    where K: Eq + Hash,
+{
+    let mut merged = HashMap::new();
+    for (key, value) in first {
+        merged.insert(key, value);
+    }
+    for (key, value) in second {
+        merged.insert(key, value);
+    }
+    merged
 }

@@ -9,6 +9,7 @@ optional = true
 version = "0.8.19"
 
 [dependencies]
+chrono = { features = ["serde"], optional = true, version = "0.2.25" }
 clippy = { optional = true, version = "0.0" }
 env_logger = "0.3.5"
 hyper = "0.9.14"
@@ -21,10 +22,12 @@ serde = "0.8.19"
 serde_derive = { optional = true, version = "0.8.19" }
 serde_json = "0.8.4"
 url = "1.2.3"
+uuid = { features = ["v4"], optional = true, version = "0.3.1" }
 
 [dependencies.serenity]
 features = ["cache", "framework", "methods", "voice"]
-version = "0.1.3"
+git = "https://github.com/zeyla/serenity.rs"
+branch = "re"
 
 [dependencies.wolfram_alpha]
 default-features = false
@@ -39,12 +42,13 @@ optional = true
 version = "0.2.1"
 
 [features]
-all = ["fuyu", "ping", "roll", "wolfram", "xkcd"]
+all = ["fuyu", "ping", "roll", "tag", "wolfram", "xkcd"]
 default = ["with-syntex"]
 fuyu = ["markov"]
 fuyu-include = ["fuyu"]
 ping = []
 roll = []
+tag = ["chrono", "uuid"]
 wolfram = ["wolfram_alpha"]
 nightly = ["serde_derive", "wolfram_alpha/nightly", "xkcd/nightly"]
 nightly-testing = [

@@ -61,6 +61,8 @@ use serenity::client::{Context, LoginType};
 use serenity::ext::framework::Framework;
 use serenity::model::Message;
 
+use util::check_msg;
+
 // The prefix to search for when looking for commands in messages.
 const COMMAND_PREFIX: &'static str = "!";
 // The ID of the author of the bot.
@@ -102,9 +104,9 @@ fn build_framework(framework: Framework) -> Framework {
 
         true
     })
-    .after(|_context, _message, command_name, error| {
+    .after(|context, _message, command_name, error| {
         if let Err(err) = error {
-            error!("Command '{}' returned error {:?}", command_name, err);
+            check_msg(context.say(&err));
         } else {
             debug!("Processed command '{}'", command_name);
         }
@@ -124,6 +126,10 @@ fn build_framework(framework: Framework) -> Framework {
     #[cfg(feature = "roll")]
     {
         framework = framework.on("roll", command::roll::handler);
+    }
+    #[cfg(feature = "tag")]
+    {
+        framework = framework.on("tag", command::tag::handler);
     }
     #[cfg(feature = "wolfram")]
     {
