@@ -153,7 +153,7 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
     // TODO: first re-upload the image to an image host, prior the setting the
     // URL.
     if let Some(img) = pods.iter().skip(1).filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next()).next() {
-        embed = embed.image(|i| i.url(unescape(img.src.as_str()).as_ref()));
+        embed = embed.image(unescape(img.src.as_str()).as_ref());
     }
 
     // If there is a primary pod, then only format and print that pod.
