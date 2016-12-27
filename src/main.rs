@@ -122,6 +122,12 @@ fn build_framework(framework: Framework) -> Framework {
     {
         framework = framework.on("fuyu", command::fuyu::handler);
     }
+    #[cfg(feature = "help")]
+    {
+        use serenity::ext::framework::help_commands;
+        framework = framework.command("help", |c| c
+          .exec_help(help_commands::plain));
+    }
     #[cfg(feature = "ping")]
     {
         framework = framework.on("ping", command::ping::handler);
