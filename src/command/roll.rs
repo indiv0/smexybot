@@ -23,7 +23,6 @@ lazy_static! {
 }
 
 pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Result<(), String> {
-    // TODO: add a notice regarding max X and Y values.
     const ERROR_MESSAGE: &'static str = "Please specify a roll in the form XdY (e.g. 2d6)";
 
     trace!("Received roll command with args: {:?}", args);
@@ -58,6 +57,14 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Resu
             let die_sides = match capture.at(2) {
                 Some(die_sides) => {
                     match die_sides.parse::<u32>() {
+                        Ok(0) => {
+                            check_msg(context.say("Number of die sides cannot be 0."));
+                            return Ok(());
+                        },
+                        Ok(4294967295) => {
+                            check_msg(context.say("Number of die sides is too large"));
+                            return Ok(());
+                        },
                         Ok(die_sides) => die_sides,
                         _ => {
                             check_msg(context.say(ERROR_MESSAGE));
@@ -70,6 +77,8 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Resu
                     return Ok(());
                 },
             };
+
+            assert!(die_sides > 0 && die_sides < 4294967295);
 
             (number_of_dice, die_sides)
         },
@@ -86,12 +95,10 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Resu
 
     let mut rolls = Vec::new();
     let mut rng = rand::thread_rng();
-    let mut sum = 0;
+    let mut sum = 0u32;
     for _ in 1..(number_of_dice + 1) {
-        // TODO: verify that die sides is >= 1.
         let roll = rng.gen_range::<u32>(1, die_sides + 1);
-        // TODO: add an overflow check here.
-        sum += roll;
+        sum = sum.checked_add(roll).ok_or("Unable to calculate result: sum of rolls too large")?;
         rolls.push(roll);
     }
     let roll_string = rolls.iter()
