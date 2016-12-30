@@ -7,6 +7,7 @@ normalize_comments = false
 struct_trailing_comma = "Always"
 struct_lit_trailing_comma = "Always"
 reorder_imports = true
+reorder_imported_names = true
 report_todo = "Always"
 report_fixme = "Always"
 where_trailing_comma = true

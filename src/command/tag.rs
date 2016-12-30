@@ -16,7 +16,7 @@ use ::CONFIG;
 use chrono::{DateTime, UTC};
 use self::uuid::Uuid;
 use serde_json;
-use serenity::client::{rest, Context};
+use serenity::client::{Context, rest};
 use serenity::model::{GuildId, Message, UserId};
 use serenity::utils::builder::CreateEmbed;
 use std::collections::HashMap;
