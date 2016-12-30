@@ -29,6 +29,10 @@ before_script:
       else
         export PATH=$HOME/Library/Python/2.7/bin:$PATH
       fi
+  # install rustfmt
+  - |
+      (cargo install rustfmt || true) &&
+      export PATH=$PATH:$HOME/.cargo/bin
 install:
   # install libsodium
   - wget https://github.com/jedisct1/libsodium/releases/download/1.0.8/libsodium-1.0.8.tar.gz
@@ -39,6 +43,8 @@ install:
   - export LD_LIBRARY_PATH=$HOME/installed_libsodium/lib:$LD_LIBRARY_PATH
 # the main build
 script:
+  # run rustfmt
+  - cargo fmt -- --write-mode diff
   - |
       if [[ "$TRAVIS_RUST_VERSION" == nightly* ]]; then
         travis-cargo build -- --no-default-features
