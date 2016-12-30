@@ -6,7 +6,7 @@ build = "build.rs"
 
 [build-dependencies.serde_codegen]
 optional = true
-version = "0.8.19"
+version = "0.8.21"
 
 [dependencies]
 chrono = { features = ["serde"], version = "0.2.25" }
@@ -19,17 +19,16 @@ markov = { optional = true, version = "0.0.32" }
 psutil = { optional = true, version = "1.0.0" }
 rand = "0.3.15"
 regex = "0.1.80"
-serde = "0.8.19"
-serde_derive = { optional = true, version = "0.8.19" }
+serde = "0.8.21"
+serde_derive = { optional = true, version = "0.8.21" }
 serde_json = "0.8.4"
 time = { optional = true, version = "0.1.35" }
-url = "1.2.3"
+url = "1.2.4"
 uuid = { features = ["v4"], optional = true, version = "0.3.1" }
 
 [dependencies.serenity]
 features = ["cache", "framework", "methods", "voice"]
 git = "https://github.com/zeyla/serenity.rs"
-branch = "re"
 
 [dependencies.wolfram_alpha]
 default-features = false
