@@ -57,7 +57,6 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
     let total_mem;
     let resident_mem;
     let shared_mem;
-    // TODO: find a way to clean up this attribute.
     #[cfg_attr(feature = "clippy", allow(cast_precision_loss))]
     {
         total_mem = memory.size as f64 * BYTES_TO_MEGABYTES;
@@ -67,30 +66,21 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
 
     check_msg(context.send_message(message.channel_id, |m| {
         m.embed(|e| {
-            e
-            // TODO: extract bot name to config
-            .title(&format!("{} stats", CONFIG.bot_name))
-            // TODO: official bot server invite link
-            // TODO: total/online/unique/unique online members (like R. Danny ?about)
-            .field(|f| f.name("Members").value(&users_count.to_string()))
-            // TODO: total/text/voice (like R. Danny ?about)
-            .field(|f| f.name("Channels").value(&channels_count.to_string()))
-            // TODO: change format to Wd Xh Ym Zs
-            .field(|f| f.name("Uptime").value(&duration_to_string(&uptime)))
-            .field(|f| f.name("Servers").value(&guilds_count.to_string()))
-            .field(|f| f.name("Thread Count").value(&threads.to_string()))
-            .field(|f| f
-                   .name("Memory Usage")
-                   .value(&format!(
-                           "Total: {:.2} MB\nResident: {:.2} MB\nShared: {:.2} MB",
-                           round(total_mem, 2),
-                           round(resident_mem, 2),
-                           round(shared_mem, 2))))
-            // TODO: "Commands run"
-            // TODO: memory usage
-            // TODO: "Current threads"
-            .field(|f| f.name("Source").value(&CONFIG.source_url))
-            .timestamp(timestamp_to_string(&current_time))
+            e.title(&format!("{} stats", CONFIG.bot_name))
+                .field(|f| f.name("Members").value(&users_count.to_string()))
+                .field(|f| f.name("Channels").value(&channels_count.to_string()))
+                .field(|f| f.name("Uptime").value(&duration_to_string(&uptime)))
+                .field(|f| f.name("Servers").value(&guilds_count.to_string()))
+                .field(|f| f.name("Thread Count").value(&threads.to_string()))
+                .field(|f| {
+                    f.name("Memory Usage")
+                        .value(&format!("Total: {:.2} MB\nResident: {:.2} MB\nShared: {:.2} MB",
+                                        round(total_mem, 2),
+                                        round(resident_mem, 2),
+                                        round(shared_mem, 2)))
+                })
+                .field(|f| f.name("Source").value(&CONFIG.source_url))
+                .timestamp(timestamp_to_string(&current_time))
         })
     }));
 
