@@ -23,9 +23,7 @@ use serenity::model::Message;
 
 use util::{check_msg, random_colour};
 
-pub fn handler(context: &Context, _message: &Message, _args: Vec<String>)
-    -> Result<(), String>
-{
+pub fn handler(context: &Context, _message: &Message, _args: Vec<String>) -> Result<(), String> {
     let channel_id = context.channel_id.expect("Failed to retrieve channel ID from context");
     // TODO: handle this properly.
     if let Err(err) = context.broadcast_typing(channel_id) {

@@ -12,9 +12,8 @@
 extern crate regex;
 extern crate xkcd;
 
-use std::env;
-use std::io::Read;
-use std::result::Result as StdResult;
+
+use error::{Error, Result};
 
 use hyper::Url;
 use hyper::client::Client;
@@ -22,8 +21,9 @@ use self::regex::Regex;
 use serde_json;
 use serenity::client::Context;
 use serenity::model::Message;
-
-use error::{Error, Result};
+use std::env;
+use std::io::Read;
+use std::result::Result as StdResult;
 use util::{check_msg, split_list};
 
 lazy_static! {
@@ -53,10 +53,7 @@ struct XkcdPlugin {
 
 impl XkcdPlugin {
     /// Returns a new instance of `XkcdPlugin`.
-    fn new(
-        google_custom_search_api_key: String,
-        google_custom_search_engine_id: String,
-    ) -> Self {
+    fn new(google_custom_search_api_key: String, google_custom_search_engine_id: String) -> Self {
         XkcdPlugin {
             hyper_client: Client::new(),
             google_custom_search_api_key: google_custom_search_api_key,
@@ -80,14 +77,13 @@ impl XkcdPlugin {
         };
         trace!("Query: {}", query);
 
-        match query_cse(
-            &self.hyper_client,
-            &query,
-            &self.google_custom_search_api_key,
-            &self.google_custom_search_engine_id,
-        ) {
+        match query_cse(&self.hyper_client,
+                        &query,
+                        &self.google_custom_search_api_key,
+                        &self.google_custom_search_engine_id) {
             Ok(res) => {
-                let mut comic_urls = res.items.iter()
+                let mut comic_urls = res.items
+                    .iter()
                     .filter_map(|item| XKCD_URL_REGEX.captures_iter(&item.link).next())
                     .filter_map(|capture| capture.at(1));
                 match comic_urls.next() {
@@ -116,20 +112,25 @@ impl XkcdPlugin {
     }
 }
 
-pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
-    -> StdResult<(), String>
-{
+pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> StdResult<(), String> {
     let (command, args) = split_list(args);
 
     let response = match command.as_ref().map(String::as_ref) {
         Some("search") => PLUGIN.search(&args),
         Some("random") => PLUGIN.random(),
-        Some(comic_id) => match comic_id.parse() {
-            Ok(comic_id) => match xkcd::comics::get(&PLUGIN.hyper_client, comic_id) {
-                Ok(comic) => comic.img.into_string(),
-                Err(_) => format!("Failed to retrieve comic: {}", comic_id),
-            },
-            _ => "Please provide a valid argument (\"search\", \"random\", or a comic ID)".to_owned(),
+        Some(comic_id) => {
+            match comic_id.parse() {
+                Ok(comic_id) => {
+                    match xkcd::comics::get(&PLUGIN.hyper_client, comic_id) {
+                        Ok(comic) => comic.img.into_string(),
+                        Err(_) => format!("Failed to retrieve comic: {}", comic_id),
+                    }
+                },
+                _ => {
+                    "Please provide a valid argument (\"search\", \"random\", or a comic ID)"
+                        .to_owned()
+                },
+            }
         },
         _ => PLUGIN.latest_comic(),
     };
@@ -143,7 +144,7 @@ fn query_cse(
     client: &Client,
     query: &str,
     search_api_key: &str,
-    search_engine_id: &str,
+    search_engine_id: &str
 ) -> Result<CseResponse> {
     let mut url = GOOGLE_CUSTOM_SEARCH_URL.clone();
     url.query_pairs_mut()

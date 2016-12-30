@@ -22,9 +22,7 @@ lazy_static! {
     static ref DICE_ROLL_REGEX: Regex = Regex::new(r"^(\d*)d(\d*)").unwrap();
 }
 
-pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
-    -> Result<(), String>
-{
+pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Result<(), String> {
     // TODO: add a notice regarding max X and Y values.
     const ERROR_MESSAGE: &'static str = "Please specify a roll in the form XdY (e.g. 2d6)";
 
@@ -33,7 +31,7 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
         Some(arg) => arg,
         _ => {
             check_msg(context.say(ERROR_MESSAGE));
-            return Ok(())
+            return Ok(());
         },
     };
 
@@ -42,30 +40,34 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
     let (number_of_dice, die_sides) = match next_capture {
         Some(capture) => {
             let number_of_dice = match capture.at(1) {
-                Some(number_of_dice) => match number_of_dice.parse::<u32>() {
-                    Ok(number_of_dice) => number_of_dice,
-                    _ => {
-                        check_msg(context.say(ERROR_MESSAGE));
-                        return Ok(())
-                    },
+                Some(number_of_dice) => {
+                    match number_of_dice.parse::<u32>() {
+                        Ok(number_of_dice) => number_of_dice,
+                        _ => {
+                            check_msg(context.say(ERROR_MESSAGE));
+                            return Ok(());
+                        },
+                    }
                 },
                 _ => {
                     check_msg(context.say(ERROR_MESSAGE));
-                    return Ok(())
+                    return Ok(());
                 },
             };
 
             let die_sides = match capture.at(2) {
-                Some(die_sides) => match die_sides.parse::<u32>() {
-                    Ok(die_sides) => die_sides,
-                    _ => {
-                        check_msg(context.say(ERROR_MESSAGE));
-                        return Ok(())
-                    },
+                Some(die_sides) => {
+                    match die_sides.parse::<u32>() {
+                        Ok(die_sides) => die_sides,
+                        _ => {
+                            check_msg(context.say(ERROR_MESSAGE));
+                            return Ok(());
+                        },
+                    }
                 },
                 _ => {
                     check_msg(context.say(ERROR_MESSAGE));
-                    return Ok(())
+                    return Ok(());
                 },
             };
 
@@ -73,13 +75,13 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>)
         },
         _ => {
             check_msg(context.say(ERROR_MESSAGE));
-            return Ok(())
+            return Ok(());
         },
     };
 
     if number_of_dice == 0 {
         check_msg(context.say("Number of dice cannot be 0"));
-        return Ok(())
+        return Ok(());
     }
 
     let mut rolls = Vec::new();

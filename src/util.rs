@@ -7,14 +7,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::collections::HashMap;
-use std::hash::Hash;
 
 use chrono::{DateTime, Duration, UTC};
 use rand::{self, Rng};
 use serenity::Result as SerenityResult;
 use serenity::model::Message;
 use serenity::utils::Colour;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 /// Takes a `Vec<T>` and splits it into a head and a tail.
 #[inline]
@@ -43,8 +43,7 @@ pub fn random_colour() -> Colour {
 
 /// Takes two `HashMap`s, merges them together, and returns the result.
 #[inline]
-pub fn merge<K: Hash + Eq, V>(first: HashMap<K, V>, second: HashMap<K, V>)
-        -> HashMap<K, V>
+pub fn merge<K: Hash + Eq, V>(first: HashMap<K, V>, second: HashMap<K, V>) -> HashMap<K, V>
     where K: Eq + Hash,
 {
     let mut merged = HashMap::new();

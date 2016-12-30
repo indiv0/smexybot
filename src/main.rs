@@ -57,16 +57,16 @@ mod counter;
 mod error;
 mod util;
 
-use std::collections::HashMap;
-use std::env;
 
 use chrono::{DateTime, UTC};
-use serenity::Client;
-use serenity::client::LoginType;
-use serenity::ext::framework::Framework;
 
 use config::Config;
 use counter::CommandCounter;
+use serenity::Client;
+use serenity::client::LoginType;
+use serenity::ext::framework::Framework;
+use std::collections::HashMap;
+use std::env;
 use util::{check_msg, timestamp_to_string};
 
 const RATE_LIMIT_MESSAGE: &'static str = "Try this again in %time% seconds.";
@@ -116,33 +116,34 @@ fn main() {
 // Configures the `Framework` used by serenity, and registers the handlers for
 // any enabled commands.
 fn build_framework(framework: Framework) -> Framework {
-    let mut framework = framework.configure(|c| c
-        .rate_limit_message(RATE_LIMIT_MESSAGE)
-        .prefix(&CONFIG.command_prefix))
-    .before(|context, message, command_name| {
-        info!(
+    let mut framework = framework.configure(|c| {
+            c.rate_limit_message(RATE_LIMIT_MESSAGE)
+                .prefix(&CONFIG.command_prefix)
+        })
+        .before(|context, message, command_name| {
+            info!(
             "Got command '{}' from user '{}'",
             command_name,
             message.author.name,
         );
 
-        // Increment the number of times this command has been run. If the
-        // command's name does not exist in the counter, add a default value of
-        // 0.
-        let mut data = context.data.lock().expect("Failed to lock context data");
-        let counter = data.get_mut::<CommandCounter>().unwrap();
-        let entry = counter.entry(command_name.clone()).or_insert(0);
-        *entry += 1;
+            // Increment the number of times this command has been run. If the
+            // command's name does not exist in the counter, add a default value of
+            // 0.
+            let mut data = context.data.lock().expect("Failed to lock context data");
+            let counter = data.get_mut::<CommandCounter>().unwrap();
+            let entry = counter.entry(command_name.clone()).or_insert(0);
+            *entry += 1;
 
-        true
-    })
-    .after(|context, _message, command_name, error| {
-        if let Err(err) = error {
-            check_msg(context.say(&err));
-        } else {
-            debug!("Processed command '{}'", command_name);
-        }
-    });
+            true
+        })
+        .after(|context, _message, command_name, error| {
+            if let Err(err) = error {
+                check_msg(context.say(&err));
+            } else {
+                debug!("Processed command '{}'", command_name);
+            }
+        });
 
     #[cfg(feature = "fuyu")]
     {
@@ -151,8 +152,7 @@ fn build_framework(framework: Framework) -> Framework {
     #[cfg(feature = "help")]
     {
         use serenity::ext::framework::help_commands;
-        framework = framework.command("help", |c| c
-          .exec_help(help_commands::plain));
+        framework = framework.command("help", |c| c.exec_help(help_commands::plain));
     }
     #[cfg(feature = "ping")]
     {
@@ -188,19 +188,13 @@ fn login() -> (LoginType, Client) {
 
     if let Ok(bot_token) = env::var("DISCORD_BOT_TOKEN") {
         debug!("Performing bot token login");
-        return (
-            LoginType::Bot,
-            Client::login_bot(&bot_token),
-        )
+        return (LoginType::Bot, Client::login_bot(&bot_token));
     }
     debug!("Skipping bot token login");
 
     if let Ok(user_token) = env::var("DISCORD_USER_TOKEN") {
         debug!("Performing user token login");
-        return (
-            LoginType::User,
-            Client::login_user(&user_token),
-        )
+        return (LoginType::User, Client::login_user(&user_token));
     }
     debug!("Skipping user token login");
 

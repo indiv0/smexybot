@@ -1,14 +1,12 @@
 extern crate time;
 
+
+use ::CONFIG;
 use self::time::PreciseTime;
 use serenity::client::Context;
 use serenity::model::Message;
 
-use ::CONFIG;
-
-pub fn handler(context: &Context, message: &Message, _args: Vec<String>)
-    -> Result<(), String>
-{
+pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
     if !owner_check(context, message) {
         return Ok(());
     }
@@ -18,8 +16,7 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>)
     let end = PreciseTime::now();
     if let Ok(mut m) = msg {
         let ms = start.to(end).num_milliseconds();
-        let _ = m.edit(&format!("Pong, {} milliseconds", ms),
-                       |m| m);
+        let _ = m.edit(&format!("Pong, {} milliseconds", ms), |m| m);
     }
 
     Ok(())

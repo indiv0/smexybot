@@ -1,23 +1,22 @@
 extern crate psutil;
 
+
+use ::{CONFIG, UPTIME};
 use chrono::UTC;
 use serenity::client::{CACHE, Context};
 use serenity::model::{Guild, GuildChannel, Message, UserId};
-
-use ::{CONFIG, UPTIME};
 use util::{check_msg, duration_to_string, timestamp_to_string};
 
 const BYTES_TO_MEGABYTES: f64 = 1f64 / (1024f64 * 1024f64);
 
-pub fn handler(context: &Context, message: &Message, _args: Vec<String>)
-    -> Result<(), String>
-{
+pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
     let current_time = UTC::now();
     let cache = match CACHE.read() {
         Ok(cache) => cache,
         Err(_) => return Err("Failed to lock cache".to_owned()),
     };
-    let guilds = cache.guilds.values()
+    let guilds = cache.guilds
+        .values()
         .collect::<Vec<&Guild>>();
     let guilds_count = guilds.len();
     let channels = guilds.iter()
@@ -58,9 +57,9 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>)
         shared_mem = memory.share as f64 * BYTES_TO_MEGABYTES;
     }
 
-    check_msg(context.send_message(
-        message.channel_id,
-        |m| m.embed(|e| e
+    check_msg(context.send_message(message.channel_id, |m| {
+        m.embed(|e| {
+            e
             // TODO: extract bot name to config
             .title("Smexybot stats")
             // TODO: official bot server invite link
@@ -84,8 +83,8 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>)
             // TODO: "Current threads"
             .field(|f| f.name("Source").value(&CONFIG.source_url))
             .timestamp(timestamp_to_string(&current_time))
-        ),
-    ));
+        })
+    }));
 
     Ok(())
 }

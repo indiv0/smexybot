@@ -11,8 +11,6 @@
 
 extern crate wolfram_alpha;
 
-use std::env;
-use std::error::Error as StdError;
 
 use hyper::Client;
 use self::wolfram_alpha::Error as WolframError;
@@ -20,6 +18,8 @@ use self::wolfram_alpha::model::{Pod, QueryResult};
 use serenity::client::Context;
 use serenity::model::Message;
 use serenity::utils::builder::{CreateEmbed, CreateEmbedField};
+use std::env;
+use std::error::Error as StdError;
 
 use util::{check_msg, random_colour};
 
@@ -52,12 +52,7 @@ impl WolframPlugin {
         };
         trace!("WolframAlpha query: {}", query);
 
-        match wolfram_alpha::query::query(
-            &self.hyper_client,
-            &self.app_id,
-            &query,
-            None,
-        ) {
+        match wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None) {
             Ok(query_result) => Ok(query_result),
             Err(e) => {
                 let description = match e {
@@ -70,9 +65,7 @@ impl WolframPlugin {
     }
 }
 
-pub fn handler(context: &Context, message: &Message, args: Vec<String>)
-    -> Result<(), String>
-{
+pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
     // TODO: handle this properly.
     if let Err(err) = context.broadcast_typing(message.channel_id) {
         return Err(format!("{:?}", err));
@@ -90,11 +83,10 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>)
                     |m| m.embed(|e| format_pods(&pods, e).colour(colour)),
                 ));
             } else if let Some(didyoumeans) = query_result.didyoumeans {
-                    let colour = random_colour();
-                    check_msg(context.send_message(
-                        message.channel_id,
-                        |m| m.embed(|e| e
-                            .title("Query unsuccessful.")
+                let colour = random_colour();
+                check_msg(context.send_message(message.channel_id, |m| {
+                    m.embed(|e| {
+                        e.title("Query unsuccessful.")
                             .colour(colour)
                             .field(|f| {
                                 let field = f.name("Did you mean:");
@@ -105,14 +97,13 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>)
                                 }
                                 field.value(description.as_str())
                             })
-                        ),
-                    ));
+                    })
+                }));
             } else if let Some(error) = query_result.error {
-                    let colour = random_colour();
-                    check_msg(context.send_message(
-                        message.channel_id,
-                        |m| m.embed(|e| e
-                            .title("Wolfram|Alpha returned an error.")
+                let colour = random_colour();
+                check_msg(context.send_message(message.channel_id, |m| {
+                    m.embed(|e| {
+                        e.title("Wolfram|Alpha returned an error.")
                             .colour(colour)
                             .field(|f| {
                                 let field = f.name("Error");
@@ -124,8 +115,8 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>)
                                 );
                                 field.value(description.as_str())
                             })
-                        ),
-                    ));
+                    })
+                }));
             } else {
                 check_msg(context.say("Query was unsuccessful. Perhaps try rewording it?"));
             }
@@ -141,8 +132,8 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
 
     // First result is the interpretation.
     let interpretation = iter.next()
-        .unwrap()
-        .subpod[0]
+            .unwrap()
+            .subpod[0]
         .plaintext
         .clone()
         .unwrap_or("".to_owned());
@@ -152,7 +143,10 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
 
     // TODO: first re-upload the image to an image host, prior the setting the
     // URL.
-    if let Some(img) = pods.iter().skip(1).filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next()).next() {
+    if let Some(img) = pods.iter()
+        .skip(1)
+        .filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next())
+        .next() {
         embed = embed.image(unescape(img.src.as_str()).as_ref());
     }
 
@@ -178,9 +172,7 @@ fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
         let text = match subpod.plaintext {
             // If the text field is empty, add a message indicating as such
             // (discord doesn't like empty/just newline fields).
-            Some(ref text) if text == "" || text == "\n" => {
-                "[No text]".to_owned()
-            },
+            Some(ref text) if text == "" || text == "\n" => "[No text]".to_owned(),
             // Grab all the consecutive blobs of text.
             Some(ref text) => {
                 trace!("Adding text: {}", text);

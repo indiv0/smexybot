@@ -1,10 +1,11 @@
+
+
+use error::Result;
+
+use serde_json;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{ErrorKind, Read};
-
-use serde_json;
-
-use error::Result;
 
 #[cfg(feature = "nightly")]
 include!("config.in.rs");
@@ -38,8 +39,7 @@ impl Config {
         let mut config = String::new();
         file.read_to_string(&mut config)
             .expect(&format!("Failed to read from file: {}", name));
-        let config = serde_json::from_str(&config)
-            .expect("Failed to deserialize Config");
+        let config = serde_json::from_str(&config).expect("Failed to deserialize Config");
         info!("Loaded config from: \"{}\"", name);
 
         Ok(config)

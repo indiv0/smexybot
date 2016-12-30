@@ -1,8 +1,8 @@
 extern crate typemap;
 
-use std::collections::HashMap;
 
 use self::typemap::Key;
+use std::collections::HashMap;
 
 pub struct CommandCounter;
 

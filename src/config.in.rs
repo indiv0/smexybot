@@ -5,6 +5,5 @@ pub struct Config {
     /// The URL for the source of the project.
     pub source_url: String,
     /// The authors to use in author checks for permissions.
-    // TODO: replace type with `UserId`
     pub owners: HashSet<u64>,
 }
