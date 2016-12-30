@@ -27,7 +27,7 @@ use std::result::Result as StdResult;
 use util::{check_msg, split_list};
 
 lazy_static! {
-    static ref GOOGLE_CUSTOM_SEARCH_URL: Url = "https://www.googleapis.com/customsearch/v1".parse::<Url>()
+    static ref GOOGLE_CSE_URL: Url = "https://www.googleapis.com/customsearch/v1".parse::<Url>()
         .unwrap();
     static ref PLUGIN: XkcdPlugin = {
         let cse_api_key = env::var("GOOGLE_XKCD_CUSTOM_SEARCH_API_KEY")
@@ -146,7 +146,7 @@ fn query_cse(
     search_api_key: &str,
     search_engine_id: &str
 ) -> Result<CseResponse> {
-    let mut url = GOOGLE_CUSTOM_SEARCH_URL.clone();
+    let mut url = GOOGLE_CSE_URL.clone();
     url.query_pairs_mut()
         .clear()
         .append_pair("key", search_api_key)
