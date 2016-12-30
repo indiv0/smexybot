@@ -23,6 +23,7 @@ serde = "0.8.21"
 serde_derive = { optional = true, version = "0.8.21" }
 serde_json = "0.8.4"
 time = { optional = true, version = "0.1.35" }
+typemap = "0.3.3"
 url = "1.2.4"
 uuid = { features = ["v4"], optional = true, version = "0.3.1" }
 

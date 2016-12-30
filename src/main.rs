@@ -53,9 +53,11 @@ extern crate url;
 
 mod command;
 mod config;
+mod counter;
 mod error;
 mod util;
 
+use std::collections::HashMap;
 use std::env;
 
 use chrono::{DateTime, UTC};
@@ -64,6 +66,7 @@ use serenity::client::LoginType;
 use serenity::ext::framework::Framework;
 
 use config::Config;
+use counter::CommandCounter;
 use util::{check_msg, timestamp_to_string};
 
 lazy_static! {
@@ -80,6 +83,11 @@ fn main() {
 
     // Create a client for a user.
     let (_, mut client) = login();
+
+    {
+        let mut data = client.data.lock().expect("Failed to lock client data");
+        data.insert::<CommandCounter>(HashMap::default());
+    }
 
     client.on_ready(|_context, ready| {
         let shard_info = if let Some(s) = ready.shard {
@@ -108,12 +116,20 @@ fn main() {
 fn build_framework(framework: Framework) -> Framework {
     let mut framework = framework.configure(|c| c
         .prefix(&CONFIG.command_prefix))
-    .before(|_context, message, command_name| {
-        debug!(
+    .before(|context, message, command_name| {
+        info!(
             "Got command '{}' from user '{}'",
             command_name,
             message.author.name,
         );
+
+        // Increment the number of times this command has been run. If the
+        // command's name does not exist in the counter, add a default value of
+        // 0.
+        let mut data = context.data.lock().expect("Failed to lock context data");
+        let counter = data.get_mut::<CommandCounter>().unwrap();
+        let entry = counter.entry(command_name.clone()).or_insert(0);
+        *entry += 1;
 
         true
     })
