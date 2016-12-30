@@ -20,18 +20,6 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
     }
 
     Ok(())
-    /*
-    command!(ping(ctx) {
-        let start = PreciseTime::now();
-        let msg = ctx.say("0");
-        let end = PreciseTime::now();
-        if let Ok(mut m) = msg {
-            let ms = start.to(end).num_milliseconds();
-            let _ = m.edit(&format!("Pong, {} milliseconds", ms),
-                           |m| m);
-        }
-    });
-    */
 }
 
 fn owner_check(_: &Context, message: &Message) -> bool {

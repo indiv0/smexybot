@@ -137,7 +137,6 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
         .plaintext
         .clone()
         .unwrap_or("".to_owned());
-    //let mut embed = embed.title(&format!("**Interpretation**: `{}`", &interpretation));
     let mut embed = embed.title("Input interpretation");
     embed = embed.description(&format!("`{}`", interpretation));
 
