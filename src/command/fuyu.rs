@@ -21,14 +21,11 @@ use self::markov::Chain;
 use serenity::client::Context;
 use serenity::model::Message;
 
-use util::{check_msg, random_colour};
+use util::{check_msg, random_colour, stringify};
 
-pub fn handler(context: &Context, _message: &Message, _args: Vec<String>) -> Result<(), String> {
-    let channel_id = context.channel_id.expect("Failed to retrieve channel ID from context");
-    // TODO: handle this properly.
-    if let Err(err) = context.broadcast_typing(channel_id) {
-        return Err(format!("{:?}", err));
-    }
+pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
+    let channel_id = message.channel_id;
+    context.broadcast_typing(channel_id).map_err(stringify)?;
 
     let response = create_chain().generate_str();
     let colour = random_colour();

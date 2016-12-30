@@ -13,6 +13,8 @@ use serenity::Result as SerenityResult;
 use serenity::model::Message;
 use serenity::utils::Colour;
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::Debug;
 use std::hash::Hash;
 
 /// Takes a `Vec<T>` and splits it into a head and a tail.
@@ -88,4 +90,12 @@ pub fn duration_to_string(duration: &Duration) -> String {
         minutes,
         seconds,
     )
+}
+
+/// Converts an error which implements the `Debug` trait into a `String`.
+#[inline]
+pub fn stringify<E>(error: E) -> String
+    where E: Debug + Error,
+{
+    format!("Error: {:?}", error)
 }
