@@ -12,9 +12,7 @@
 extern crate regex;
 extern crate xkcd;
 
-
 use error::{Error, Result};
-
 use hyper::Url;
 use hyper::client::Client;
 use self::regex::Regex;

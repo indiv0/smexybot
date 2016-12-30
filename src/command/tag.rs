@@ -11,7 +11,6 @@
 
 extern crate uuid;
 
-
 use ::CONFIG;
 
 use chrono::{DateTime, UTC};

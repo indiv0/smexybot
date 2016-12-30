@@ -11,7 +11,6 @@
 
 extern crate wolfram_alpha;
 
-
 use hyper::Client;
 use self::wolfram_alpha::Error as WolframError;
 use self::wolfram_alpha::model::{Pod, QueryResult};
@@ -20,7 +19,6 @@ use serenity::model::Message;
 use serenity::utils::builder::{CreateEmbed, CreateEmbedField};
 use std::env;
 use std::error::Error as StdError;
-
 use util::{check_msg, random_colour};
 
 lazy_static! {

@@ -1,6 +1,5 @@
 extern crate time;
 
-
 use ::CONFIG;
 use self::time::PreciseTime;
 use serenity::client::Context;

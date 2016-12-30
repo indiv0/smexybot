@@ -57,9 +57,7 @@ mod counter;
 mod error;
 mod util;
 
-
 use chrono::{DateTime, UTC};
-
 use config::Config;
 use counter::CommandCounter;
 use serenity::Client;

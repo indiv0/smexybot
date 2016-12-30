@@ -1,6 +1,5 @@
 extern crate typemap;
 
-
 use self::typemap::Key;
 use std::collections::HashMap;
 

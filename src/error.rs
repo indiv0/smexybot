@@ -7,7 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-
 use hyper;
 use serde_json;
 use std::error::Error as StdError;

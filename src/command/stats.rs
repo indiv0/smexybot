@@ -1,6 +1,5 @@
 extern crate psutil;
 
-
 use ::{CONFIG, UPTIME};
 use chrono::UTC;
 use serenity::client::{CACHE, Context};

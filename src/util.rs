@@ -7,7 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-
 use chrono::{DateTime, Duration, UTC};
 use rand::{self, Rng};
 use serenity::Result as SerenityResult;

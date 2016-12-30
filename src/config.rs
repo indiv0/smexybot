@@ -1,7 +1,4 @@
-
-
 use error::Result;
-
 use serde_json;
 use std::collections::HashSet;
 use std::fs::File;
