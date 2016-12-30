@@ -235,13 +235,13 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>)
 {
     let mut args = args.into_iter();
 
-    match args.next().as_ref().map(String::as_ref) {
-        Some("create") => create(context, message, args.collect()),
-        Some("info") => info(context, message, args.collect()),
-        Some("list") => list(context, message, args.collect()),
-        Some("edit") => edit(context, message, args.collect()),
-        Some("delete") => delete(context, message, args.collect()),
-        Some(name) => {
+    let f = match args.next().as_ref().map(String::as_ref) {
+        Some("create") => create,
+        Some("info") => info,
+        Some("list") => list,
+        Some("edit") => edit,
+        Some("delete") => delete,
+        Some(name) => return {
             // TODO: ensure we get the GuildId even if it's not in the cache.
             let guild_id = message.guild_id();
 
@@ -258,8 +258,10 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>)
                 Err(err) => Err(err),
             }
         },
-        _ => Err("Either specify a tag name or use one of the available commands.".to_owned()),
-    }
+        _ => return Err("Either specify a tag name or use one of the available commands.".to_owned()),
+    };
+
+    f(context, message, args.collect())
 }
 
 pub fn create(context: &Context, message: &Message, args: Vec<String>)
