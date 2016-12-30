@@ -49,6 +49,7 @@ impl Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
+            bot_name: "smexybot".to_owned(),
             command_prefix: ";".to_owned(),
             owners: HashSet::new(),
             source_url: "https://github.com/indiv0/smexybot".to_owned(),

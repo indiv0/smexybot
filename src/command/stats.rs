@@ -61,7 +61,7 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
         m.embed(|e| {
             e
             // TODO: extract bot name to config
-            .title("Smexybot stats")
+            .title(&format!("{} stats", CONFIG.bot_name))
             // TODO: official bot server invite link
             // TODO: total/online/unique/unique online members (like R. Danny ?about)
             .field(|f| f.name("Members").value(&users_count.to_string()))
