@@ -29,7 +29,7 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Resu
     trace!("Received roll command with args: {:?}", args);
     let arg = match args.iter().next() {
         Some(arg) => arg,
-        _ => {
+        None => {
             check_msg(context.say(ERROR_MESSAGE));
             return Ok(());
         },
