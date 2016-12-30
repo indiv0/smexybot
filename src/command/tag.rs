@@ -258,7 +258,7 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>)
                 Err(err) => Err(err),
             }
         },
-        _ => return Err("Either specify a tag name or use one of the available commands.".to_owned()),
+        None => return Err("Either specify a tag name or use one of the available commands.".to_owned()),
     };
 
     f(context, message, args.collect())
