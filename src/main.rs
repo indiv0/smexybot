@@ -7,7 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#![deny(missing_docs)]
 #![deny(non_camel_case_types)]
 #![cfg_attr(feature = "nightly", feature(proc_macro))]
 #![cfg_attr(feature = "clippy", feature(plugin))]
@@ -15,11 +14,12 @@
 #![warn(missing_copy_implementations,
         missing_debug_implementations,
         missing_docs,
+        trivial_casts,
         trivial_numeric_casts,
-        unsafe_code,
         unused_extern_crates,
         unused_import_braces,
         unused_qualifications)]
+#![deny(missing_docs, non_camel_case_types, unsafe_code)]
 #![cfg_attr(feature="clippy", warn(cast_possible_truncation))]
 #![cfg_attr(feature="clippy", warn(cast_possible_wrap))]
 #![cfg_attr(feature="clippy", warn(cast_precision_loss))]
