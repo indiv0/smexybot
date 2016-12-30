@@ -46,9 +46,17 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>)
         Ok(memory) => memory,
         Err(_) => return Err("Failed to retrieve process memory usage".to_owned()),
     };
-    let total_mem = memory.size as f64 * BYTES_TO_MEGABYTES;
-    let resident_mem = memory.resident as f64 * BYTES_TO_MEGABYTES;
-    let shared_mem = memory.share as f64 * BYTES_TO_MEGABYTES;
+
+    let total_mem;
+    let resident_mem;
+    let shared_mem;
+    // TODO: find a way to clean up this attribute.
+    #[cfg_attr(feature = "clippy", allow(cast_precision_loss))]
+    {
+        total_mem = memory.size as f64 * BYTES_TO_MEGABYTES;
+        resident_mem = memory.resident as f64 * BYTES_TO_MEGABYTES;
+        shared_mem = memory.share as f64 * BYTES_TO_MEGABYTES;
+    }
 
     check_msg(context.send_message(
         message.channel_id,
