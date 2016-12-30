@@ -82,16 +82,23 @@ fn main() {
     let (_, mut client) = login();
 
     client.on_ready(|_context, ready| {
+        let shard_info = if let Some(s) = ready.shard {
+            Some(format!("shard {}/{} ", s[0] + 1, s[1]))
+        } else {
+            None
+        };
         println!(
-            "[Ready] {} is serving {} guilds!",
+            "Started {}as {}#{}, serving {} guilds",
+            shard_info.unwrap_or_else(|| "".to_owned()),
             ready.user.name,
+            ready.user.discriminator,
             ready.guilds.len(),
         );
     });
 
     client.with_framework(build_framework);
 
-    if let Err(err) = client.start() {
+    if let Err(err) = client.start_autosharded() {
         error!("Client error: {:?}", err);
     }
 }
