@@ -69,6 +69,8 @@ use config::Config;
 use counter::CommandCounter;
 use util::{check_msg, timestamp_to_string};
 
+const RATE_LIMIT_MESSAGE: &'static str = "Try this again in %time% seconds.";
+
 lazy_static! {
     static ref CONFIG: Config = Config::new(Some("config.json"));
     static ref UPTIME: DateTime<UTC> = UTC::now();
@@ -115,6 +117,7 @@ fn main() {
 // any enabled commands.
 fn build_framework(framework: Framework) -> Framework {
     let mut framework = framework.configure(|c| c
+        .rate_limit_message(RATE_LIMIT_MESSAGE)
         .prefix(&CONFIG.command_prefix))
     .before(|context, message, command_name| {
         info!(
