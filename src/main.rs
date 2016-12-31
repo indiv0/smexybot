@@ -19,6 +19,7 @@
         unused_import_braces,
         unused_qualifications)]
 #![deny(missing_docs, non_camel_case_types, unsafe_code)]
+#![cfg_attr(not(feature = "nightly"), deny(warnings))]
 #![cfg_attr(feature="clippy", warn(
         cast_possible_truncation,
         cast_possible_wrap,
