@@ -19,15 +19,16 @@
         unused_import_braces,
         unused_qualifications)]
 #![deny(missing_docs, non_camel_case_types, unsafe_code)]
-#![cfg_attr(feature="clippy", warn(cast_possible_truncation))]
-#![cfg_attr(feature="clippy", warn(cast_possible_wrap))]
-#![cfg_attr(feature="clippy", warn(cast_precision_loss))]
-#![cfg_attr(feature="clippy", warn(cast_sign_loss))]
-#![cfg_attr(feature="clippy", warn(mut_mut))]
+#![cfg_attr(feature="clippy", warn(
+        cast_possible_truncation,
+        cast_possible_wrap,
+        cast_precision_loss,
+        cast_sign_loss,
+        mut_mut,
+        wrong_pub_self_convention))]
 // This allows us to use `unwrap` on `Option` values when compiling in test mode
 // (because using it in tests is idiomatic).
 #![cfg_attr(all(not(test), feature="clippy"), warn(result_unwrap_used))]
-#![cfg_attr(feature="clippy", warn(wrong_pub_self_convention))]
 
 //! Smexybot is a general-purpose [Discord](https://discordapp.com/) bot written
 //! in [Rust](https://www.rust-lang.org/). It is built upon the
