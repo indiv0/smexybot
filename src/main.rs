@@ -64,6 +64,7 @@ use counter::CommandCounter;
 use serenity::Client;
 use serenity::client::LoginType;
 use serenity::ext::framework::Framework;
+use serenity::model::UserId;
 use std::collections::HashMap;
 use std::env;
 use util::{check_msg, timestamp_to_string};
@@ -118,6 +119,7 @@ fn build_framework(framework: Framework) -> Framework {
     let mut framework = framework.configure(|c| {
             c.rate_limit_message(RATE_LIMIT_MESSAGE)
                 .prefix(&CONFIG.command_prefix)
+                .owners(CONFIG.owners.iter().map(|id| UserId(*id)).collect())
         })
         .before(|context, message, command_name| {
             info!(
@@ -155,7 +157,11 @@ fn build_framework(framework: Framework) -> Framework {
     }
     #[cfg(feature = "ping")]
     {
-        framework = framework.on("ping", command::ping::handler);
+        framework = framework.command("ping", |c| {
+            c.desc("Responds with 'Pong', as well as a latency estimate.")
+                .exec(command::ping::handler)
+                .owners_only(true)
+        });
     }
     #[cfg(feature = "roll")]
     {

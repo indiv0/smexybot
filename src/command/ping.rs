@@ -9,16 +9,11 @@
 
 extern crate time;
 
-use ::CONFIG;
 use self::time::PreciseTime;
 use serenity::client::Context;
 use serenity::model::Message;
 
-pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
-    if !owner_check(context, message) {
-        return Ok(());
-    }
-
+pub fn handler(context: &Context, _message: &Message, _args: Vec<String>) -> Result<(), String> {
     let start = PreciseTime::now();
     let msg = context.say("0");
     let end = PreciseTime::now();
@@ -28,8 +23,4 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
     }
 
     Ok(())
-}
-
-fn owner_check(_: &Context, message: &Message) -> bool {
-    CONFIG.owners.contains(&message.author.id.0)
 }

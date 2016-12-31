@@ -11,8 +11,6 @@
 
 extern crate uuid;
 
-use ::CONFIG;
-
 use chrono::{DateTime, UTC};
 use self::uuid::Uuid;
 use serde_json;
@@ -392,7 +390,7 @@ fn verify_tag_name(name: &str) -> Result<(), String> {
 }
 
 fn owner_check(message: &Message, tag: &Tag) -> bool {
-    CONFIG.owners.contains(&message.author.id.0) || message.author.id == tag.owner_id
+    message.author.id == tag.owner_id
 }
 
 fn get_database_location(guild: Option<GuildId>) -> String {
