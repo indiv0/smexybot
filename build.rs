@@ -10,7 +10,7 @@ mod inner {
 
         for &(src, dst) in &[
             ("src/config.in.rs", "config.rs"),
-            ("src/command/tags.in.rs", "tags.rs"),
+            ("src/command/tag.in.rs", "tag.rs"),
             ("src/command/xkcd.in.rs", "xkcd.rs"),
         ] {
             let src = Path::new(src);
