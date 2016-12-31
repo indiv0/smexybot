@@ -26,9 +26,7 @@ use std::sync::Mutex;
 use util::{check_msg, merge, timestamp_to_string};
 
 lazy_static! {
-    // TODO: ensure this doesn't get loaded lazily (compared to the bot).
     static ref TAGS: Tags = Tags {
-        // TODO: get the config name from the global config?
         config: Mutex::new(Config::new("tags.json")),
     };
 }
@@ -40,7 +38,6 @@ include!("tag.in.rs");
 include!(concat!(env!("OUT_DIR"), "/tag.rs"));
 
 impl Tag {
-    // TODO: perhaps take references here?
     fn new(
         name: String,
         content: String,
@@ -70,7 +67,6 @@ impl Tag {
                     None => {
                         match rest::get_user(owner_id.0) {
                             Ok(user) => (user.name.clone(), user.avatar_url()),
-                            // TODO: handle this failure case better.
                             Err(_) => return a,
                         }
                     },
@@ -109,7 +105,6 @@ impl Config {
             tags: HashMap::new(),
         };
 
-        // TODO: do this async.
         config.load();
 
         config
@@ -138,7 +133,6 @@ impl Config {
         debug!("Loaded config from: {}", self.name);
     }
 
-    // TODO: do this async
     fn save(&self) {
         let temp = format!("{}-{}.tmp", Uuid::new_v4(), self.name);
         let mut file = File::create(&temp).expect(&format!("Failed to create file: {}", temp));
@@ -160,9 +154,7 @@ struct Tags {
 
 impl Tags {
     fn get_possible_tags(&self, guild: Option<GuildId>) -> HashMap<String, Tag> {
-        // TODO: handle this unwrap.
         let config = self.config.lock().expect("Failed to lock Config");
-        // TODO: properly handle a missing hashmap case.
         let generic = config.get("generic")
             .cloned()
             .unwrap_or_else(HashMap::new);
@@ -178,7 +170,6 @@ impl Tags {
         }
     }
 
-    // TODO: return a list of suggestions.
     fn get_tag(&self, guild: Option<GuildId>, name: String) -> Result<Tag, String> {
         self.get_possible_tags(guild)
             .get(&name)
@@ -188,8 +179,6 @@ impl Tags {
 
     fn put_tag(&self, guild: Option<GuildId>, name: String, tag: Tag) {
         // Load the actual tag so we can modify it.
-        // TODO: handle this better because this can cause an issue
-        // if the tag was deleted since being retrieved.
         let mut config = TAGS.config
             .lock()
             .expect("Failed to lock Config");
@@ -203,8 +192,6 @@ impl Tags {
     }
 
     fn delete_tag(&self, guild: Option<GuildId>, name: &str) {
-        // TODO: handle this better because this can cause an issue
-        // if the tag was deleted since being retrieved.
         let mut config = TAGS.config
             .lock()
             .expect("Failed to lock Config");
@@ -218,8 +205,6 @@ impl Tags {
     }
 }
 
-// TODO: sort tags by server
-// TODO: add edit/delete functionality
 pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
     let mut args = args.into_iter();
 
@@ -231,7 +216,6 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Resul
         Some("delete") => delete,
         Some(name) => {
             return {
-                // TODO: ensure we get the GuildId even if it's not in the cache.
                 let guild_id = message.guild_id();
 
                 let lookup = name.to_lowercase();
@@ -272,8 +256,6 @@ pub fn create(context: &Context, message: &Message, args: Vec<String>) -> Result
         content.join(" ")
     };
 
-    // TODO: clean the tag content here.
-
     let name = name.trim().to_lowercase().to_owned();
     verify_tag_name(&name)?;
 
@@ -293,8 +275,6 @@ pub fn create(context: &Context, message: &Message, args: Vec<String>) -> Result
                              None,
                              Some(location.clone()),
                              None));
-    // TODO: perhaps do this more efficiently by modifying the DB in place?
-    // TODO: or maybe use `put_tag`?
     config.insert(location, database);
     check_msg(context.say(&format!("Tag \"{}\" successfully created.", name)));
 
@@ -310,7 +290,6 @@ pub fn info(context: &Context, message: &Message, args: Vec<String>) -> Result<(
     };
 
     let name = name.trim().to_lowercase().to_owned();
-    // TODO: ensure we get the GuildId even if it's not in the cache.
     let guild_id = message.guild_id();
     let tag = TAGS.get_tag(guild_id, name)?;
 
@@ -320,7 +299,6 @@ pub fn info(context: &Context, message: &Message, args: Vec<String>) -> Result<(
 }
 
 pub fn list(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
-    // TODO: ensure we get the GuildId even if it's not in the cache.
     let guild_id = message.guild_id();
     let mut tags = TAGS.get_possible_tags(guild_id);
     let mut tags = tags.drain()
@@ -364,8 +342,6 @@ pub fn edit(context: &Context, message: &Message, args: Vec<String>) -> Result<(
     } else {
         content.join(" ")
     };
-
-    // TODO: clean the tag content here.
 
     tag.content = content;
     TAGS.put_tag(guild_id, name.clone(), tag);
@@ -420,7 +396,6 @@ fn owner_check(message: &Message, tag: &Tag) -> bool {
 }
 
 fn get_database_location(guild: Option<GuildId>) -> String {
-    // TODO: ensure we get the GuildId even if it's not in the cache.
     guild.map(|g| g.to_string())
         .unwrap_or_else(|| "generic".to_owned())
 }

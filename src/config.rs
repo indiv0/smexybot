@@ -34,7 +34,6 @@ impl Config {
         Default::default()
     }
 
-    // TODO: remove the panics
     pub fn load_from_file(name: &str) -> Result<Self> {
         let mut file = match File::open(name) {
             Ok(file) => file,

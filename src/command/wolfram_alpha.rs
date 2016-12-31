@@ -19,7 +19,7 @@ use serenity::model::Message;
 use serenity::utils::builder::{CreateEmbed, CreateEmbedField};
 use std::env;
 use std::error::Error as StdError;
-use util::{check_msg, random_colour};
+use util::{check_msg, random_colour, stringify};
 
 lazy_static! {
     static ref PLUGIN: WolframPlugin = {
@@ -64,18 +64,15 @@ impl WolframPlugin {
 }
 
 pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
-    // TODO: handle this properly.
-    if let Err(err) = context.broadcast_typing(message.channel_id) {
-        return Err(format!("{:?}", err));
-    }
+    context.broadcast_typing(message.channel_id).map_err(stringify)?;
 
     match PLUGIN.query(&args) {
         Ok(query_result) => {
             if query_result.success {
                 // Format the `QueryResult` into Discord-ready output.
                 let colour = random_colour();
-                // TODO: get rid of the unwrap here.
-                let pods = query_result.pod.unwrap();
+                let pods = query_result.pod
+                    .ok_or_else(|| "Result did not contain any parsable information")?;
                 check_msg(context.send_message(
                     message.channel_id,
                     |m| m.embed(|e| format_pods(&pods, e).colour(colour)),
@@ -138,8 +135,6 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
     let mut embed = embed.title("Input interpretation");
     embed = embed.description(&format!("`{}`", interpretation));
 
-    // TODO: first re-upload the image to an image host, prior the setting the
-    // URL.
     if let Some(img) = pods.iter()
         .skip(1)
         .filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next())
@@ -202,7 +197,6 @@ fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
 }
 
 #[inline]
-// TODO: find a better way to do this.
 fn unescape(s: &str) -> String {
     s.replace("&amp;", "&")
         .replace("&gt;", ">")
