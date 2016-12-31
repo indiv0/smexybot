@@ -15,10 +15,10 @@ use std::io;
 use std::result::Result as StdResult;
 use url;
 
-/// A convenient alias type for results for `tumult`.
+/// A convenient alias type for results for `smexybot`.
 pub type Result<T> = StdResult<T, Error>;
 
-/// Represents errors which occur while using the Tumult framework.
+/// Represents errors which occur while using Smexybot.
 #[derive(Debug)]
 pub enum Error {
     /// A `hyper` crate error.
