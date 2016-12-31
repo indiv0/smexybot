@@ -134,6 +134,6 @@ See [LICENSE-APACHE][license-apache], and [LICENSE-MIT][license-mit] for details
 [my-applications]: https://discordapp.com/developers/applications/me
 [new-issue]: https://github.com/indiv0/smexybot/issues/new
 [rust-lang]: https://www.rust-lang.org/
-[serenity-rs]: https://github.com/zeyla/serenity-rs
+[serenity-rs]: https://github.com/zeyla/serenity.rs
 [tumult]: https://github.com/indiv0/tumult
 [zeyla]: https://github.com/zeyla
