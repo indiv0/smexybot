@@ -121,10 +121,10 @@ fn build_framework(framework: Framework) -> Framework {
         })
         .before(|context, message, command_name| {
             info!(
-            "Got command '{}' from user '{}'",
-            command_name,
-            message.author.name,
-        );
+                "Got command '{}' from user '{}'",
+                command_name,
+                message.author.name,
+            );
 
             // Increment the number of times this command has been run. If the
             // command's name does not exist in the counter, add a default value of
