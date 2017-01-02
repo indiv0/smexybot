@@ -17,11 +17,8 @@ use hyper::Url;
 use hyper::client::Client;
 use self::regex::Regex;
 use serde_json;
-use serenity::client::Context;
-use serenity::model::Message;
 use std::env;
 use std::io::Read;
-use std::result::Result as StdResult;
 use util::{check_msg, split_list};
 
 lazy_static! {
@@ -110,7 +107,7 @@ impl XkcdPlugin {
     }
 }
 
-pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> StdResult<(), String> {
+command!(xkcd(context, _message, args) {
     let (command, args) = split_list(args);
 
     let response = match command.as_ref().map(String::as_ref) {
@@ -134,9 +131,7 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> StdR
     };
 
     check_msg(context.say(response.as_ref()));
-
-    Ok(())
-}
+});
 
 fn query_cse(
     client: &Client,

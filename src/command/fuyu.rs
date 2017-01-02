@@ -18,12 +18,10 @@
 extern crate markov;
 
 use self::markov::Chain;
-use serenity::client::Context;
-use serenity::model::Message;
 
 use util::{check_msg, random_colour, stringify};
 
-pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
+command!(fuyu(context, message, _args) {
     let channel_id = message.channel_id;
     context.broadcast_typing(channel_id).map_err(stringify)?;
 
@@ -33,8 +31,7 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
         channel_id,
         |m| m.embed(|e| e.colour(colour).description(response.as_ref())),
     ));
-    Ok(())
-}
+});
 
 fn create_chain() -> Chain<String> {
     let chat_logs = load_chat_logs();

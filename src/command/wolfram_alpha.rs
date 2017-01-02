@@ -14,8 +14,6 @@ extern crate wolfram_alpha;
 use hyper::Client;
 use self::wolfram_alpha::Error as WolframError;
 use self::wolfram_alpha::model::{Pod, QueryResult};
-use serenity::client::Context;
-use serenity::model::Message;
 use serenity::utils::builder::{CreateEmbed, CreateEmbedField};
 use std::env;
 use std::error::Error as StdError;
@@ -63,7 +61,7 @@ impl WolframPlugin {
     }
 }
 
-pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
+command!(wolfram(context, message, args) {
     context.broadcast_typing(message.channel_id).map_err(stringify)?;
 
     match PLUGIN.query(&args) {
@@ -118,9 +116,7 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Resul
         },
         Err(err) => check_msg(context.say(err.as_ref())),
     }
-
-    Ok(())
-}
+});
 
 fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
     let mut iter = pods.iter();

@@ -13,8 +13,6 @@ extern crate regex;
 
 use rand::{self, Rng};
 use self::regex::Regex;
-use serenity::client::Context;
-use serenity::model::Message;
 
 use util::check_msg;
 
@@ -22,7 +20,7 @@ lazy_static! {
     static ref DICE_ROLL_REGEX: Regex = Regex::new(r"^(\d*)d(\d*)").unwrap();
 }
 
-pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Result<(), String> {
+command!(roll(context, _message, args) {
     const ERROR_MESSAGE: &'static str = "Please specify a roll in the form XdY (e.g. 2d6)";
 
     trace!("Received roll command with args: {:?}", args);
@@ -112,6 +110,4 @@ pub fn handler(context: &Context, _message: &Message, args: Vec<String>) -> Resu
     };
 
     check_msg(context.say(response.as_ref()));
-
-    Ok(())
-}
+});

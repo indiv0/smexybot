@@ -203,7 +203,7 @@ impl Tags {
     }
 }
 
-pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
+command!(tag(context, message, args) {
     let mut args = args.into_iter();
 
     let f = match args.next().as_ref().map(String::as_ref) {
@@ -236,8 +236,13 @@ pub fn handler(context: &Context, message: &Message, args: Vec<String>) -> Resul
         },
     };
 
-    f(context, message, args.collect())
-}
+    // This is necessary because the `command!` macro returns `Ok(())`. Without
+    // this match and fall-through, rustc would complain about unreachable code.
+    match f(context, message, args.collect()) {
+        Ok(()) => {},
+        v => return v,
+    }
+});
 
 pub fn create(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
     let mut args = args.into_iter();

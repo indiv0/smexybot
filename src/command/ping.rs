@@ -10,10 +10,8 @@
 extern crate time;
 
 use self::time::PreciseTime;
-use serenity::client::Context;
-use serenity::model::Message;
 
-pub fn handler(context: &Context, _message: &Message, _args: Vec<String>) -> Result<(), String> {
+command!(ping(context, _message, _args) {
     let start = PreciseTime::now();
     let msg = context.say("0");
     let end = PreciseTime::now();
@@ -21,6 +19,4 @@ pub fn handler(context: &Context, _message: &Message, _args: Vec<String>) -> Res
         let ms = start.to(end).num_milliseconds();
         let _ = m.edit(&format!("Pong, {} milliseconds", ms), |m| m);
     }
-
-    Ok(())
-}
+});

@@ -11,13 +11,13 @@ extern crate psutil;
 
 use ::{CONFIG, UPTIME};
 use chrono::UTC;
-use serenity::client::{CACHE, Context};
-use serenity::model::{Guild, GuildChannel, Message, UserId};
+use serenity::client::CACHE;
+use serenity::model::{Guild, GuildChannel, UserId};
 use util::{check_msg, duration_to_string, timestamp_to_string};
 
 const BYTES_TO_MEGABYTES: f64 = 1f64 / (1024f64 * 1024f64);
 
-pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
+command!(stats(context, message, _args) {
     let current_time = UTC::now();
     let cache = match CACHE.read() {
         Ok(cache) => cache,
@@ -83,9 +83,7 @@ pub fn handler(context: &Context, message: &Message, _args: Vec<String>) -> Resu
                 .timestamp(timestamp_to_string(&current_time))
         })
     }));
-
-    Ok(())
-}
+});
 
 /// Rounds a number to the specified decimal precision.
 #[inline]

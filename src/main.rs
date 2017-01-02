@@ -16,8 +16,7 @@
         trivial_casts,
         trivial_numeric_casts,
         unused_extern_crates,
-        unused_import_braces,
-        unused_qualifications)]
+        unused_import_braces)]
 #![deny(missing_docs, non_camel_case_types, unsafe_code)]
 #![cfg_attr(not(feature = "nightly"), deny(warnings))]
 #![cfg_attr(feature="clippy", warn(
@@ -49,6 +48,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+#[macro_use]
 extern crate serenity;
 extern crate url;
 
@@ -148,7 +148,7 @@ fn build_framework(framework: Framework) -> Framework {
 
     #[cfg(feature = "fuyu")]
     {
-        framework = framework.on("fuyu", command::fuyu::handler);
+        framework = framework.command("fuyu", |c| c.exec(command::fuyu::fuyu));
     }
     #[cfg(feature = "help")]
     {
@@ -159,29 +159,29 @@ fn build_framework(framework: Framework) -> Framework {
     {
         framework = framework.command("ping", |c| {
             c.desc("Responds with 'Pong', as well as a latency estimate.")
-                .exec(command::ping::handler)
+                .exec(command::ping::ping)
                 .owners_only(true)
         });
     }
     #[cfg(feature = "roll")]
     {
-        framework = framework.on("roll", command::roll::handler);
+        framework = framework.command("roll", |c| c.exec(command::roll::roll));
     }
     #[cfg(feature = "stats")]
     {
-        framework = framework.on("stats", command::stats::handler);
+        framework = framework.command("stats", |c| c.exec(command::stats::stats));
     }
     #[cfg(feature = "tag")]
     {
-        framework = framework.on("tag", command::tag::handler);
+        framework = framework.command("tag", |c| c.exec(command::tag::tag));
     }
     #[cfg(feature = "wolfram")]
     {
-        framework = framework.on("wolfram", command::wolfram_alpha::handler);
+        framework = framework.command("wolfram", |c| c.exec(command::wolfram_alpha::wolfram));
     }
     #[cfg(feature = "xkcd")]
     {
-        framework = framework.on("xkcd", command::xkcd::handler);
+        framework = framework.command("xkcd", |c| c.exec(command::xkcd::xkcd));
     }
 
     framework
