@@ -64,7 +64,7 @@ pub fn timestamp_to_string(timestamp: &DateTime<UTC>) -> String {
     format!("{}", timestamp.format("%Y-%m-%dT%H:%M:%SZ"))
 }
 
-/// Returns the specified `Duration` as a `String` in the format "HH:MM:SS"
+/// Returns the specified `Duration` as a `String` in the format "Wd Xh Ym Zs"
 #[inline]
 pub fn duration_to_string(duration: &Duration) -> String {
     let days = duration.num_days();
