@@ -39,22 +39,27 @@ script:
   # run rustfmt
   - cargo fmt -- --write-mode diff
   - |
+      echo "Compiling" &&
       if [[ "$TRAVIS_RUST_VERSION" == nightly* ]]; then
-        travis-cargo build -- --no-default-features
+        travis-cargo build -- --no-default-features --features "nightly $CARGO_FEATURES"
       else
-        travis-cargo build
-      fi &&
+        travis-cargo build -- --features "$CARGO_FEATURES"
+      fi
+  - |
+      echo "Testing" &&
       if [[ "$TRAVIS_RUST_VERSION" == nightly* ]]; then
-        travis-cargo test -- --no-default-features
+        travis-cargo test -- --no-default-features --features "nightly $CARGO_FEATURES"
       else
-        travis-cargo test
-      fi &&
+        travis-cargo test -- --features "$CARGO_FEATURES"
+      fi
+  - |
+      echo "Benchmarking" &&
       if [[ "$TRAVIS_RUST_VERSION" == nightly* ]]; then
-        travis-cargo bench -- --no-default-features
+        travis-cargo bench -- --no-default-features --features "nightly $CARGO_FEATURES"
       else
-        travis-cargo bench
-      fi &&
-      travis-cargo --only stable doc
+        travis-cargo bench -- --features "$CARGO_FEATURES"
+      fi
+  - echo "Generating docs (if on stable)" && travis-cargo --only stable doc -- --features "$CARGO_FEATURES"
 after_success:
   # upload the documentation from the build with stable (automatically only
   # actually runs from the master branch, not individual PRs)
@@ -66,8 +71,9 @@ after_success:
 env:
   global:
     - RUST_BACKTRACE=1
+    - CARGO_FEATURES="all"
     # override the default '--features unstable' used for the nightly branch
-    - TRAVIS_CARGO_NIGHTLY_FEATURE="nightly-testing"
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     # encrypted Github token for doc upload
     - secure: a8+XUVzRn+egVATXk9xlSA5275O4ipp0k+Ngop5tghl7fipVIYhTVnkNp33d/W4kO6BUdQOi1wv+2hPDK1/CzjTPl7ln9XIIqv42yYBSfJ6YX7bGnvCJLy82KpY7bIRNR6LEOro8cZVRb9Tub3epY0BgnMSECFklqxwVx1zfnP/Urd+W/i5BQXi66fSU4GttdPAYQjjJfVZDRUS2W/l5ZmHczVt1+ILMsvR9aFHfU3NG6p7eNE0u0UWQ/TwLERz3etDY5oyba2buAGnSLyxiJjXGcS6JRRbN4OVzVNEQckJYo1h5OvWLjQlFK2N/EEnTWjebQislThL/4Sv7uIgTgumaDtsZKkEj4IGCGsH1sC5UPvO5R2Hm1qXC8eZ/GOof7MJPJLc/Nl+1sMH1U7e/IPk8+seLgyKP/iGBVEbKs+Pa5XEg3hY2huxc2yY02vYjzBwrgR+wDDy4SQi1yw7Dmet+HQ1yFP9wCtmiZmWoIfb+379dOlRf61jtUEcsiQ84++3q1KzabayjTE7Xuut0AQYMTwa/kVoLGRyIikorz2ELSQbCLqNBKDLpmrfxSan2Az5OOWQrF6Byx+0w9Sf1GxRmUfa1qIZWYzwbdPgvMXFAqEugpy7NvGMQazwaILdaiUu2S6FYZxPLTRp5+ImVAdnoXtxe1LiJfb/N1iXGvzk=
 branches:
