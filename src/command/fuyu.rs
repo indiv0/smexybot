@@ -44,7 +44,7 @@ fn create_chain() -> Chain<String> {
 
 #[cfg(feature = "fuyu-include")]
 fn load_chat_logs() -> String {
-    const FUYU_CHAT_LOGS: &'static str = include_str!("../../logs/fuyu.txt");
+    const FUYU_CHAT_LOGS: &'static str = include_str!("../../assets/chat_logs/fuyu.txt");
 
     FUYU_CHAT_LOGS.to_owned()
 }
@@ -54,7 +54,7 @@ fn load_chat_logs() -> String {
     use std::fs::File;
     use std::io::Read;
 
-    const FILE_NAME: &'static str = "logs/fuyu.txt";
+    const FILE_NAME: &'static str = "assets/chat_logs/fuyu.txt";
 
     let mut file = File::open(FILE_NAME).expect("Failed to open chat log file");
     let mut contents = String::new();
