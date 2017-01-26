@@ -44,16 +44,22 @@ optional = true
 version = "0.2.1"
 
 [features]
-all = ["fuyu", "help", "ping", "roll", "stats", "tag", "wolfram", "xkcd"]
+all = [
+    "counter",
+    "fuyu",
+    "help",
+    "ping",
+    "roll",
+    "stats",
+    "tag",
+    "wolfram",
+    "xkcd",
+]
+counter = ["store"]
 default = ["with-syntex"]
 fuyu = ["markov"]
 fuyu-include = ["fuyu"]
 help = []
-ping = ["time"]
-roll = []
-stats = ["psutil"]
-tag = ["uuid"]
-wolfram = ["wolfram_alpha"]
 nightly = ["serde_derive", "wolfram_alpha/nightly", "xkcd/nightly"]
 nightly-testing = [
     "clippy",
@@ -61,4 +67,10 @@ nightly-testing = [
     "wolfram_alpha/nightly-testing",
     "xkcd/nightly-testing",
 ]
+ping = ["time"]
+roll = []
+stats = ["psutil"]
+store = ["uuid"]
+tag = ["store"]
+wolfram = ["wolfram_alpha"]
 with-syntex = ["serde_codegen", "wolfram_alpha/with-syntex", "xkcd/with-syntex"]

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::sync::{Mutex, MutexGuard};
 
 /// Takes a `Vec<T>` and splits it into a head and a tail.
 #[inline]
@@ -98,4 +99,11 @@ pub fn stringify<E>(error: E) -> String
     where E: Debug + Error,
 {
     format!("Error: {:?}", error)
+}
+
+/// Attempts to lock the provided `Mutex`, returning a user-facing error message
+/// if the lock failed with a `PoisonError<T>`.
+#[inline]
+pub fn lock_mutex<T>(mutex: &Mutex<T>) -> Result<MutexGuard<T>, String> {
+    mutex.lock().map_err(|_| "Error: an internal error occurred, please report this.".to_owned())
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -9,9 +9,8 @@
 
 use hyper;
 use serde_json;
+use std::{fmt, io};
 use std::error::Error as StdError;
-use std::fmt;
-use std::io;
 use std::result::Result as StdResult;
 use url;
 

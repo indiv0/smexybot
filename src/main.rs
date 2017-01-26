@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -9,6 +9,10 @@
 
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
+// This is because serenity's `command!` macro results in an
+// `uncreachable_patterns` error when used in the
+// `command!(cmd(_, _, _, arg: T))` form.
+#![allow(unreachable_patterns)]
 #![warn(missing_copy_implementations,
         missing_debug_implementations,
         missing_docs,
@@ -50,11 +54,14 @@ extern crate serde_json;
 #[macro_use]
 extern crate serenity;
 extern crate url;
+extern crate uuid;
 
 mod command;
 mod config;
 mod counter;
 mod error;
+#[cfg(feature = "store")]
+mod store;
 mod util;
 
 use chrono::{DateTime, UTC};
@@ -145,6 +152,10 @@ fn build_framework(framework: Framework) -> Framework {
             }
         });
 
+    #[cfg(feature = "counter")]
+    {
+        framework = framework.command("counter", |c| c.exec(command::counter::counter));
+    }
     #[cfg(feature = "fuyu")]
     {
         framework = framework.command("fuyu", |c| c.exec(command::fuyu::fuyu));
