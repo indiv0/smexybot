@@ -122,12 +122,8 @@ impl Counters<Key, Value, CounterStore> {
         }
     }
 
-    fn create_counter(
-        &mut self,
-        guild: Option<GuildId>,
-        name: String,
-        counter: Counter
-    ) -> Result<(), String> {
+    fn create_counter(&mut self, guild: Option<GuildId>, name: String, counter: Counter)
+        -> Result<(), String> {
         let location = get_database_location(guild);
         let mut database = self.store
             .get(&location)

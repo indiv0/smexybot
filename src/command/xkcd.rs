@@ -82,15 +82,19 @@ impl XkcdPlugin {
                     .filter_map(|item| XKCD_URL_REGEX.captures_iter(&item.link).next())
                     .filter_map(|capture| capture.at(1));
                 match comic_urls.next() {
-                    Some(comic_id_str) => comic_id_str.parse::<u32>()
-                        .ok()
-                        .map(|id| {
-                            xkcd::comics::get(&self.hyper_client, id)
-                                .ok()
-                                .map(|comic| comic.img.into_string())
-                                .unwrap_or_else(|| format!("Failed to retrieve comic: {}", id))
-                        })
-                        .unwrap_or_else(|| format!("Failed to retrieve comic: {}", comic_id_str)),
+                    Some(comic_id_str) => {
+                        comic_id_str.parse::<u32>()
+                            .ok()
+                            .map(|id| {
+                                xkcd::comics::get(&self.hyper_client, id)
+                                    .ok()
+                                    .map(|comic| comic.img.into_string())
+                                    .unwrap_or_else(|| format!("Failed to retrieve comic: {}", id))
+                            })
+                            .unwrap_or_else(|| {
+                                format!("Failed to retrieve comic: {}", comic_id_str)
+                            })
+                    },
                     None => "No results in query".to_owned(),
                 }
             },
@@ -133,12 +137,8 @@ command!(xkcd(context, _message, args) {
     check_msg(context.say(response.as_ref()));
 });
 
-fn query_cse(
-    client: &Client,
-    query: &str,
-    search_api_key: &str,
-    search_engine_id: &str
-) -> Result<CseResponse> {
+fn query_cse(client: &Client, query: &str, search_api_key: &str, search_engine_id: &str)
+    -> Result<CseResponse> {
     let mut url = GOOGLE_CSE_URL.clone();
     url.query_pairs_mut()
         .clear()

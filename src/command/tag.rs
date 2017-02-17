@@ -111,7 +111,8 @@ impl Tags<Key, Value, TagStore> {
         }
     }
 
-    fn create_tag(&mut self, guild: Option<GuildId>, name: String, tag: Tag) -> Result<(), String> {
+    fn create_tag(&mut self, guild: Option<GuildId>, name: String, tag: Tag)
+        -> Result<(), String> {
         let location = get_database_location(guild);
         let mut database = self.store
             .remove(&location)
