@@ -12,6 +12,7 @@ use serde_json;
 use std::{fmt, io};
 use std::error::Error as StdError;
 use std::result::Result as StdResult;
+use std::str::Utf8Error;
 use url;
 
 /// A convenient alias type for results for `smexybot`.
@@ -28,6 +29,8 @@ pub enum Error {
     Serde(serde_json::Error),
     /// Error while parsing a URL.
     UrlParse(url::ParseError),
+    /// Error while parsing bytes as UTF-8.
+    Utf8(Utf8Error),
 }
 
 impl fmt::Display for Error {
@@ -39,6 +42,7 @@ impl fmt::Display for Error {
             Io(ref e) => e.fmt(f),
             Serde(ref e) => e.fmt(f),
             UrlParse(ref e) => e.fmt(f),
+            Utf8(ref e) => e.fmt(f),
         }
     }
 }
@@ -52,6 +56,7 @@ impl StdError for Error {
             Io(ref e) => e.description(),
             Serde(ref e) => e.description(),
             UrlParse(ref e) => e.description(),
+            Utf8(ref e) => e.description(),
         }
     }
 
@@ -63,6 +68,7 @@ impl StdError for Error {
             Io(ref e) => e.cause(),
             Serde(ref e) => e.cause(),
             UrlParse(ref e) => e.cause(),
+            Utf8(ref e) => e.cause(),
         }
     }
 }
@@ -88,5 +94,11 @@ impl From<serde_json::Error> for Error {
 impl From<url::ParseError> for Error {
     fn from(error: url::ParseError) -> Error {
         Error::UrlParse(error)
+    }
+}
+
+impl From<Utf8Error> for Error {
+    fn from(error: Utf8Error) -> Error {
+        Error::Utf8(error)
     }
 }

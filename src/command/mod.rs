@@ -7,20 +7,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[cfg(feature = "counter")]
-pub mod counter;
-#[cfg(feature = "wolfram")]
-#[cfg(feature = "fuyu")]
-pub mod fuyu;
-#[cfg(feature = "ping")]
 pub mod ping;
-#[cfg(feature = "roll")]
 pub mod roll;
-#[cfg(feature = "stats")]
 pub mod stats;
-#[cfg(feature = "tag")]
 pub mod tag;
-#[cfg(feature = "wolfram")]
 pub mod wolfram_alpha;
-#[cfg(feature = "xkcd")]
 pub mod xkcd;

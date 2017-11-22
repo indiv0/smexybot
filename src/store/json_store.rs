@@ -7,7 +7,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -26,8 +27,8 @@ pub struct JsonFileStore<K, V>
 }
 
 impl<K, V> JsonFileStore<K, V>
-    where K: Deserialize + Eq + Hash + Serialize,
-          V: Deserialize + Serialize,
+    where K: DeserializeOwned + Eq + Hash + Serialize,
+          V: DeserializeOwned + Serialize,
 {
     fn load(&mut self) {
         let mut file = match File::open(&self.name) {
@@ -36,10 +37,10 @@ impl<K, V> JsonFileStore<K, V>
             Err(ref err) if err.kind() == ErrorKind::NotFound => return,
             Err(_) => panic!("Failed to open file: {}", self.name),
         };
-        let mut store = String::new();
-        file.read_to_string(&mut store)
+        let mut store_str = String::new();
+        file.read_to_string(&mut store_str)
             .expect(&format!("Failed to read from file: {}", self.name));
-        self.store = serde_json::from_str(&store).expect("Failed to deserialize store");
+        self.store = serde_json::from_str(&store_str).expect("Failed to deserialize store");
         debug!("Loaded config from: {}", self.name);
     }
 
@@ -58,8 +59,8 @@ impl<K, V> JsonFileStore<K, V>
 }
 
 impl<K, V> JsonFileStore<K, V>
-    where K: Deserialize + Eq + Hash + Serialize,
-          V: Deserialize + Serialize,
+    where K: DeserializeOwned + Eq + Hash + Serialize,
+          V: DeserializeOwned + Serialize,
 {
     pub fn new(name: String) -> Self {
         let mut store = JsonFileStore {
@@ -73,8 +74,8 @@ impl<K, V> JsonFileStore<K, V>
 }
 
 impl<K, V> Store<K, V> for JsonFileStore<K, V>
-    where K: Deserialize + Eq + Hash + Serialize,
-          V: Deserialize + Serialize,
+    where K: DeserializeOwned + Eq + Hash + Serialize,
+          V: DeserializeOwned + Serialize,
 {
     fn get<Q>(&self, key: &Q) -> Option<&V>
         where Q: Borrow<K>,

@@ -9,8 +9,9 @@
 
 //! Provides functionality for the `tag` command.
 
-use chrono::{DateTime, UTC};
+use chrono::{DateTime, Utc};
 use serenity::client::rest;
+use serenity::framework::standard::CommandError;
 use serenity::model::{GuildId, Message, UserId};
 use serenity::utils::builder::CreateEmbed;
 use std::collections::HashMap;
@@ -30,11 +31,15 @@ lazy_static! {
     });
 }
 
-#[cfg(feature = "nightly")]
-include!("tag.in.rs");
-
-#[cfg(feature = "with-syntex")]
-include!(concat!(env!("OUT_DIR"), "/tag.rs"));
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Tag {
+    name: String,
+    content: String,
+    owner_id: u64,
+    uses: u32,
+    location: Option<String>,
+    created_at: DateTime<Utc>,
+}
 
 impl Tag {
     fn new(name: String, content: String, owner_id: u64) -> Self {
@@ -44,7 +49,7 @@ impl Tag {
             owner_id: owner_id,
             uses: 0,
             location: None,
-            created_at: UTC::now(),
+            created_at: Utc::now(),
         }
     }
 
@@ -55,7 +60,10 @@ impl Tag {
             .author(|a| {
                 let owner_id = UserId(self.owner_id);
                 let (name, avatar_url) = match owner_id.find() {
-                    Some(user) => (user.name.clone(), user.avatar_url()),
+                    Some(user) => {
+                        let user = user.read().unwrap();
+                        (user.name.clone(), user.avatar_url())
+                    },
                     None => {
                         match rest::get_user(owner_id.0) {
                             Ok(user) => (user.name.clone(), user.avatar_url()),
@@ -153,16 +161,18 @@ impl Tags<Key, Value, TagStore> {
     }
 }
 
-command!(tag(context, message, args, first: String) {
-    let f = match first.as_ref() {
-        "create" => create,
-        "info" => info,
-        "list" => list,
-        "edit" => edit,
-        "delete" => delete,
-        name => {
+command!(tag(ctx, msg, args) {
+    let first = args.single::<String>().ok();
+
+    let f = match first.as_ref().map(|v| &v[..]) {
+        Some("create") => create,
+        Some("info") => info,
+        Some("list") => list,
+        Some("edit") => edit,
+        Some("delete") => delete,
+        Some(name) => {
             return {
-                let guild_id = message.guild_id();
+                let guild_id = msg.guild_id();
 
                 let lookup = name.to_lowercase();
                 let mut tags = lock_mutex(&*TAGS)?;
@@ -172,27 +182,30 @@ command!(tag(context, message, args, first: String) {
                         let content = tag.content.clone();
                         tag.uses += 1;
                         tags.put_tag(guild_id, lookup, tag);
-                        check_msg(context.say(&content));
+                        check_msg(msg.channel_id.say(&content));
 
                         Ok(())
                     },
-                    Err(err) => Err(err),
+                    Err(err) => Err(CommandError(err)),
                 }
             };
         },
+        None => return Err(CommandError("Please specified either a subcommand or a tag name".to_owned())),
     };
 
     // This is necessary because the `command!` macro returns `Ok(())`. Without
     // this match and fall-through, rustc would complain about unreachable code.
-    match f(context, message, args.clone()) {
+    match f(ctx, msg, args.clone()) {
         Ok(()) => {},
         v => return v,
     }
 });
 
-command!(create(context, message, args, name: String) {
+command!(create(_ctx, msg, args) {
+    let name = args.single::<String>().unwrap();
+
     let content = if args.is_empty() {
-        return Err("Please specify some content for the tag.".to_owned());
+        return Err(CommandError("Please specify some content for the tag.".to_owned()));
     } else {
         args.join(" ")
     };
@@ -200,32 +213,34 @@ command!(create(context, message, args, name: String) {
     let name = name.trim().to_lowercase().to_owned();
     verify_tag_name(&name)?;
 
-    let guild = message.guild_id();
+    let guild = msg.guild_id();
     let location = get_database_location(guild);
     let tag = {
         let mut tag = Tag::new(
             name.clone(),
             content,
-            message.author.id.0,
+            msg.author.id.0,
         );
         tag.location = Some(location);
         tag
     };
     lock_mutex(&*TAGS)?.create_tag(guild, name.clone(), tag)?;
 
-    check_msg(context.say(&format!("Tag \"{}\" successfully created.", name)));
+    check_msg(msg.channel_id.say(&format!("Tag \"{}\" successfully created.", name)));
 });
 
-command!(info(context, message, args, name: String) {
+command!(info(_ctx, msg, args) {
+    let name = args.single::<String>().unwrap();
+
     let name = name.trim().to_lowercase().to_owned();
-    let guild_id = message.guild_id();
+    let guild_id = msg.guild_id();
     let tag = lock_mutex(&*TAGS)?.get_tag(guild_id, name)?;
 
-    check_msg(context.send_message(message.channel_id, |m| m.embed(|e| tag.as_embed(e))));
+    check_msg(msg.channel_id.send_message(|m| m.embed(|e| tag.as_embed(e))));
 });
 
-command!(list(context, message, _args) {
-    let guild_id = message.guild_id();
+command!(list(_ctx, msg, _args) {
+    let guild_id = msg.guild_id();
     let mut tags = {
         let mut tags = lock_mutex(&*TAGS)?.get_possible_tags(guild_id);
         let mut tags = tags.drain()
@@ -240,22 +255,22 @@ command!(list(context, message, _args) {
     } else {
         format!("Available tags: {}", tags.join(", "))
     };
-    check_msg(context.say(&response));
+    check_msg(msg.channel_id.say(&response));
 });
 
-command!(edit(context, message, args, name: String) {
-    let name = name.trim().to_lowercase().to_owned();
+command!(edit(_ctx, msg, args) {
+    let name = args.single::<String>().unwrap().trim().to_lowercase();
 
-    let guild_id = message.guild_id();
+    let guild_id = msg.guild_id();
     let mut tags = lock_mutex(&*TAGS)?;
     let mut tag = tags.get_tag(guild_id, name.clone())?;
 
-    if !owner_check(message, &tag) {
-        return Err("You do not have permission to do that.".to_owned());
+    if !owner_check(msg, &tag) {
+        return Err(CommandError("You do not have permission to do that.".to_owned()));
     }
 
     let content = if args.is_empty() {
-        return Err("Please specify some content for the tag.".to_owned());
+        return Err(CommandError("Please specify some content for the tag.".to_owned()));
     } else {
         args.join(" ")
     };
@@ -263,26 +278,26 @@ command!(edit(context, message, args, name: String) {
     tag.content = content;
     tags.put_tag(guild_id, name.clone(), tag);
 
-    check_msg(context.say(&format!("Tag \"{}\" successfully updated.", name)));
+    check_msg(msg.channel_id.say(&format!("Tag \"{}\" successfully updated.", name)));
 });
 
-command!(delete(context, message, args, name: String) {
-    let name = name.trim().to_lowercase().to_owned();
+command!(delete(_ctx, msg, args) {
+    let name = args.single::<String>().unwrap().trim().to_lowercase();
 
-    let guild_id = message.guild_id();
+    let guild_id = msg.guild_id();
     let mut tags = lock_mutex(&*TAGS)?;
     let tag = match tags.get_tag(guild_id, name.clone()) {
         Ok(tag) => tag,
-        Err(err) => return Err(err),
+        Err(err) => return Err(CommandError(err)),
     };
 
-    if !owner_check(message, &tag) {
-        return Err("You do not have permission to do that.".to_owned());
+    if !owner_check(msg, &tag) {
+        return Err(CommandError("You do not have permission to do that.".to_owned()));
     }
 
     tags.delete_tag(guild_id, &name);
 
-    check_msg(context.say(&format!("Tag \"{}\" successfully deleted.", name)));
+    check_msg(msg.channel_id.say(&format!("Tag \"{}\" successfully deleted.", name)));
 });
 
 // Denies certain tag names from being used as keys.
@@ -298,8 +313,8 @@ fn verify_tag_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn owner_check(message: &Message, tag: &Tag) -> bool {
-    message.author.id == tag.owner_id
+fn owner_check(msg: &Message, tag: &Tag) -> bool {
+    msg.author.id == tag.owner_id
 }
 
 fn get_database_location(guild: Option<GuildId>) -> String {

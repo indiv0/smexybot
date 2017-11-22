@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -9,46 +9,51 @@
 
 //! Provides the a command which allows a user to query the Wolfram|Alpha API.
 
-extern crate wolfram_alpha;
-
 use hyper::Client;
-use self::wolfram_alpha::Error as WolframError;
-use self::wolfram_alpha::model::{Pod, QueryResult};
+use hyper::client::HttpConnector;
+use hyper_tls::HttpsConnector;
 use serenity::utils::builder::{CreateEmbed, CreateEmbedField};
 use std::env;
 use std::error::Error as StdError;
+use tokio_core::reactor::Core;
 use util::{check_msg, random_colour, stringify};
+use wolfram_alpha::{self, Error as WolframError};
+use wolfram_alpha::model::{Pod, QueryResult};
 
 lazy_static! {
-    static ref PLUGIN: WolframPlugin = {
-        let api_app_id = env::var("WOLFRAM_ALPHA_API_APP_ID")
-            .expect("WOLFRAM_ALPHA_API_APP_ID env var not set");
-        WolframPlugin::new(api_app_id)
-    };
+    static ref API_APP_ID: String = env::var("WOLFRAM_ALPHA_API_APP_ID")
+        .expect("WOLFRAM_ALPHA_API_APP_ID env var not set");
 }
 
 pub struct WolframPlugin {
     app_id: String,
-    hyper_client: Client,
+    core: Core,
+    hyper_client: Client<HttpsConnector<HttpConnector>>,
 }
 
 impl WolframPlugin {
     /// Returns a new instance of `WolframPlugin`.
     pub fn new(wolfram_alpha_api_app_id: String) -> Self {
+        let core = Core::new().unwrap();
+        let client = Client::configure()
+            .connector(HttpsConnector::new(4, &core.handle()).unwrap())
+            .build(&core.handle());
+
         WolframPlugin {
             app_id: wolfram_alpha_api_app_id,
-            hyper_client: Client::new(),
+            core,
+            hyper_client: client,
         }
     }
 
-    fn query(&self, args: &[String]) -> Result<QueryResult, String> {
+    fn query(&mut self, args: &[String]) -> Result<QueryResult, String> {
         let query = match args.len() {
             0 => return Err("Missing WolframAlpha query".to_owned()),
             _ => args.join(" "),
         };
         trace!("WolframAlpha query: {}", query);
 
-        match wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None) {
+        let res = match self.core.run(wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None)) {
             Ok(query_result) => Ok(query_result),
             Err(e) => {
                 let description = match e {
@@ -57,27 +62,30 @@ impl WolframPlugin {
                 };
                 Err(format!("Failed to query WolframAlpha: {}", description))
             },
-        }
+        };
+
+        res
     }
 }
 
-command!(wolfram(context, message, args) {
-    context.broadcast_typing(message.channel_id).map_err(stringify)?;
+command!(wolfram(_ctx, msg, args) {
+    msg.channel_id.broadcast_typing().map_err(stringify)?;
 
-    match PLUGIN.query(&args) {
+    let mut plugin = WolframPlugin::new(API_APP_ID.clone());
+
+    match plugin.query(&args) {
         Ok(query_result) => {
             if query_result.success {
                 // Format the `QueryResult` into Discord-ready output.
                 let colour = random_colour();
                 let pods = query_result.pod
                     .ok_or_else(|| "Result did not contain any parsable information")?;
-                check_msg(context.send_message(
-                    message.channel_id,
+                check_msg(msg.channel_id.send_message(
                     |m| m.embed(|e| format_pods(&pods, e).colour(colour)),
                 ));
             } else if let Some(didyoumeans) = query_result.didyoumeans {
                 let colour = random_colour();
-                check_msg(context.send_message(message.channel_id, |m| {
+                check_msg(msg.channel_id.send_message(|m| {
                     m.embed(|e| {
                         e.title("Query unsuccessful.")
                             .colour(colour)
@@ -94,7 +102,7 @@ command!(wolfram(context, message, args) {
                 }));
             } else if let Some(error) = query_result.error {
                 let colour = random_colour();
-                check_msg(context.send_message(message.channel_id, |m| {
+                check_msg(msg.channel_id.send_message(|m| {
                     m.embed(|e| {
                         e.title("Wolfram|Alpha returned an error.")
                             .colour(colour)
@@ -111,10 +119,10 @@ command!(wolfram(context, message, args) {
                     })
                 }));
             } else {
-                check_msg(context.say("Query was unsuccessful. Perhaps try rewording it?"));
+                check_msg(msg.channel_id.say("Query was unsuccessful. Perhaps try rewording it?"));
             }
         },
-        Err(err) => check_msg(context.say(err.as_ref())),
+        Err(err) => check_msg(msg.channel_id.say(err)),
     }
 });
 
@@ -152,7 +160,7 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
 }
 
 fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
-    let f = f.name(pod.title.as_ref());
+    let f = f.name(&pod.title);
 
     trace!("Formatting {} subpods", pod.subpod.len());
     let mut result = String::new();
@@ -189,7 +197,7 @@ fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
         result.push_str(truncation_msg.as_str());
     }
 
-    f.value(result.as_ref())
+    f.value(result)
 }
 
 #[inline]
