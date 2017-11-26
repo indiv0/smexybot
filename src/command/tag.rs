@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -9,48 +9,47 @@
 
 //! Provides functionality for the `tag` command.
 
-extern crate uuid;
-
-use chrono::{DateTime, UTC};
-use self::uuid::Uuid;
-use serde_json;
-use serenity::client::{Context, rest};
+use chrono::{DateTime, Utc};
+use serenity::client::rest;
+use serenity::framework::standard::CommandError;
 use serenity::model::{GuildId, Message, UserId};
 use serenity::utils::builder::CreateEmbed;
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{ErrorKind, Read, Write};
+use std::marker::PhantomData;
 use std::sync::Mutex;
-use util::{check_msg, merge, timestamp_to_string};
+use store::{JsonFileStore, Store};
+use util::{check_msg, lock_mutex, merge, timestamp_to_string};
+
+type Key = String;
+type Value = HashMap<String, Tag>;
+type TagStore = JsonFileStore<Key, Value>;
 
 lazy_static! {
-    static ref TAGS: Tags = Tags {
-        config: Mutex::new(Config::new("tags.json")),
-    };
+    static ref TAGS: Mutex<Tags<Key, Value, TagStore>> = Mutex::new(Tags {
+        store: JsonFileStore::new("tags.json".to_owned()),
+        _data: PhantomData,
+    });
 }
 
-#[cfg(feature = "nightly")]
-include!("tag.in.rs");
-
-#[cfg(feature = "with-syntex")]
-include!(concat!(env!("OUT_DIR"), "/tag.rs"));
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Tag {
+    name: String,
+    content: String,
+    owner_id: u64,
+    uses: u32,
+    location: Option<String>,
+    created_at: DateTime<Utc>,
+}
 
 impl Tag {
-    fn new(
-        name: String,
-        content: String,
-        owner_id: u64,
-        uses: Option<u32>,
-        location: Option<String>,
-        created_at: Option<DateTime<UTC>>
-    ) -> Self {
+    fn new(name: String, content: String, owner_id: u64) -> Self {
         Tag {
             name: name,
             content: content,
             owner_id: owner_id,
-            uses: uses.unwrap_or(0),
-            location: location,
-            created_at: created_at.unwrap_or_else(UTC::now),
+            uses: 0,
+            location: None,
+            created_at: Utc::now(),
         }
     }
 
@@ -61,7 +60,10 @@ impl Tag {
             .author(|a| {
                 let owner_id = UserId(self.owner_id);
                 let (name, avatar_url) = match owner_id.find() {
-                    Some(user) => (user.name.clone(), user.avatar_url()),
+                    Some(user) => {
+                        let user = user.read().expect("Failed to read RwLock");
+                        (user.name.clone(), user.avatar_url())
+                    },
                     None => {
                         match rest::get_user(owner_id.0) {
                             Ok(user) => (user.name.clone(), user.avatar_url()),
@@ -91,69 +93,17 @@ impl Tag {
 }
 
 #[derive(Debug)]
-struct Config {
-    name: String,
-    tags: HashMap<String, HashMap<String, Tag>>,
+struct Tags<K, V, S>
+    where S: Store<K, V>,
+{
+    store: S,
+    _data: PhantomData<(K, V)>,
 }
 
-impl Config {
-    fn new(name: &str) -> Self {
-        let mut config = Config {
-            name: name.to_owned(),
-            tags: HashMap::new(),
-        };
-
-        config.load();
-
-        config
-    }
-
-    fn get(&self, key: &str) -> Option<&HashMap<String, Tag>> {
-        self.tags.get(key)
-    }
-
-    fn insert(&mut self, key: String, value: HashMap<String, Tag>) {
-        self.tags.insert(key, value);
-        self.save();
-    }
-
-    fn load(&mut self) {
-        let mut file = match File::open(&self.name) {
-            Ok(file) => file,
-            // If no file is present, assume this is a fresh config.
-            Err(ref err) if err.kind() == ErrorKind::NotFound => return,
-            Err(_) => panic!("Failed to open file: {}", self.name),
-        };
-        let mut tags = String::new();
-        file.read_to_string(&mut tags)
-            .expect(&format!("Failed to read from file: {}", self.name));
-        self.tags = serde_json::from_str(&tags).expect("Failed to deserialize Config");
-        debug!("Loaded config from: {}", self.name);
-    }
-
-    fn save(&self) {
-        let temp = format!("{}-{}.tmp", Uuid::new_v4(), self.name);
-        let mut file = File::create(&temp).expect(&format!("Failed to create file: {}", temp));
-        file.write_all(serde_json::to_string(&self.tags)
-                .expect("Failed to serialize Config")
-                .as_bytes())
-            .expect(&format!("Failed to write to file: {}", temp));
-
-        // Atomically copy the new config.
-        fs::rename(temp, &self.name).expect("Failed to write new Config");
-        trace!("Saved config to: {}", self.name);
-    }
-}
-
-#[derive(Debug)]
-struct Tags {
-    config: Mutex<Config>,
-}
-
-impl Tags {
+impl Tags<Key, Value, TagStore> {
     fn get_possible_tags(&self, guild: Option<GuildId>) -> HashMap<String, Tag> {
-        let config = self.config.lock().expect("Failed to lock Config");
-        let generic = config.get("generic")
+        let generic = self.store
+            .get(&"generic".to_owned())
             .cloned()
             .unwrap_or_else(HashMap::new);
 
@@ -161,52 +111,60 @@ impl Tags {
             None => generic,
             Some(guild) => {
                 merge(generic,
-                      config.get(&guild.to_string())
+                      self.store
+                          .get(&guild.to_string())
                           .cloned()
                           .unwrap_or_else(HashMap::new))
             },
         }
     }
 
-    fn get_tag(&self, guild: Option<GuildId>, name: String) -> Result<Tag, String> {
+    fn create_tag(&mut self, guild: Option<GuildId>, name: String, tag: Tag)
+        -> Result<(), String> {
+        let location = get_database_location(guild);
+        let mut database = self.store
+            .remove(&location)
+            .unwrap_or_else(HashMap::new);
+        if database.contains_key(&name) {
+            return Err("Tag already exists.".to_owned());
+        }
+
+        database.insert(name, tag);
+        self.store.insert(location, database);
+
+        Ok(())
+    }
+
+    fn get_tag(&self, guild: Option<GuildId>, name: &str) -> Result<Tag, String> {
         self.get_possible_tags(guild)
-            .get(&name)
+            .get(name)
             .cloned()
             .ok_or_else(|| "Tag not found".to_owned())
     }
 
-    fn put_tag(&self, guild: Option<GuildId>, name: String, tag: Tag) {
-        // Load the actual tag so we can modify it.
-        let mut config = TAGS.config
-            .lock()
-            .expect("Failed to lock Config");
-        {
-            let database = config.tags
-                .get_mut(&get_database_location(guild))
-                .unwrap();
-            database.insert(name, tag);
-        }
-        config.save();
+    fn put_tag(&mut self, guild: Option<GuildId>, name: String, tag: Tag) {
+        let location = get_database_location(guild);
+        let mut database = self.store
+            .remove(&location)
+            .unwrap_or_else(HashMap::new);
+        database.insert(name, tag);
+        self.store.insert(location, database);
     }
 
-    fn delete_tag(&self, guild: Option<GuildId>, name: &str) {
-        let mut config = TAGS.config
-            .lock()
-            .expect("Failed to lock Config");
-        {
-            let database = config.tags
-                .get_mut(&get_database_location(guild))
-                .unwrap();
-            database.remove(name);
-        }
-        config.save();
+    fn delete_tag(&mut self, guild: Option<GuildId>, name: &str) {
+        let location = get_database_location(guild);
+        let mut database = self.store
+            .remove(&location)
+            .unwrap_or_else(HashMap::new);
+        database.remove(name);
+        self.store.insert(location, database);
     }
 }
 
-command!(tag(context, message, args) {
-    let mut args = args.into_iter();
+command!(tag(ctx, msg, args) {
+    let first = args.single::<String>().ok();
 
-    let f = match args.next().as_ref().map(String::as_ref) {
+    let f = match first.as_ref().map(|v| &v[..]) {
         Some("create") => create,
         Some("info") => info,
         Some("list") => list,
@@ -214,172 +172,137 @@ command!(tag(context, message, args) {
         Some("delete") => delete,
         Some(name) => {
             return {
-                let guild_id = message.guild_id();
+                let guild_id = msg.guild_id();
 
                 let lookup = name.to_lowercase();
-                match TAGS.get_tag(guild_id, lookup.clone()) {
+                let mut tags = lock_mutex(&*TAGS)?;
+                match tags.get_tag(guild_id, &lookup) {
                     Ok(tag) => {
                         let mut tag = tag.clone();
+                        let content = tag.content.clone();
                         tag.uses += 1;
-                        TAGS.put_tag(guild_id, lookup, tag.clone());
-                        check_msg(context.say(&tag.content));
+                        tags.put_tag(guild_id, lookup, tag);
+                        check_msg(msg.channel_id.say(&content));
 
                         Ok(())
                     },
-                    Err(err) => Err(err),
+                    Err(err) => Err(CommandError(err)),
                 }
             };
         },
-        None => {
-            return Err("Either specify a tag name or use one of the available commands."
-                .to_owned());
-        },
+        None => return Err(CommandError("Please specified either a subcommand or a tag name".to_owned())),
     };
 
     // This is necessary because the `command!` macro returns `Ok(())`. Without
     // this match and fall-through, rustc would complain about unreachable code.
-    match f(context, message, args.collect()) {
+    match f(ctx, msg, args.clone()) {
         Ok(()) => {},
         v => return v,
     }
 });
 
-pub fn create(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
-    let mut args = args.into_iter();
+command!(create(_ctx, msg, args) {
+    let name = args.single::<String>()
+        .expect("Failed to read command argument");
 
-    let name = match args.next() {
-        Some(name) => name,
-        None => return Err("Please specify a name for the tag.".to_owned()),
-    };
-
-    let content = args.collect::<Vec<String>>();
-    let content = if content.is_empty() {
-        return Err("Please specify some content for the tag.".to_owned());
+    let content = if args.is_empty() {
+        return Err(CommandError("Please specify some content for the tag.".to_owned()));
     } else {
-        content.join(" ")
+        args.join(" ")
     };
 
     let name = name.trim().to_lowercase().to_owned();
     verify_tag_name(&name)?;
 
-    let location = get_database_location(message.guild_id());
-    let mut config = TAGS.config.lock().expect("Failed to lock Config");
-    let mut database = config.get(&location)
-        .cloned()
-        .unwrap_or_else(HashMap::new);
-    if database.contains_key(&name) {
-        return Err("Tag already exists.".to_owned());
-    }
-
-    database.insert(name.clone(),
-                    Tag::new(name.clone(),
-                             content,
-                             message.author.id.0,
-                             None,
-                             Some(location.clone()),
-                             None));
-    config.insert(location, database);
-    check_msg(context.say(&format!("Tag \"{}\" successfully created.", name)));
-
-    Ok(())
-}
-
-pub fn info(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
-    let mut args = args.into_iter();
-
-    let name = match args.next() {
-        Some(name) => name,
-        None => return Err("Please specify a name for the tag to get info on.".to_owned()),
+    let guild = msg.guild_id();
+    let location = get_database_location(guild);
+    let tag = {
+        let mut tag = Tag::new(
+            name.clone(),
+            content,
+            msg.author.id.0,
+        );
+        tag.location = Some(location);
+        tag
     };
+    lock_mutex(&*TAGS)?.create_tag(guild, name.clone(), tag)?;
+
+    check_msg(msg.channel_id.say(&format!("Tag \"{}\" successfully created.", name)));
+});
+
+command!(info(_ctx, msg, args) {
+    let name = args.single::<String>()
+        .expect("Failed to read command argument");
 
     let name = name.trim().to_lowercase().to_owned();
-    let guild_id = message.guild_id();
-    let tag = TAGS.get_tag(guild_id, name)?;
+    let guild_id = msg.guild_id();
+    let tag = lock_mutex(&*TAGS)?.get_tag(guild_id, &name)?;
 
-    check_msg(context.send_message(message.channel_id, |m| m.embed(|e| tag.as_embed(e))));
+    check_msg(msg.channel_id.send_message(|m| m.embed(|e| tag.as_embed(e))));
+});
 
-    Ok(())
-}
-
-pub fn list(context: &Context, message: &Message, _args: Vec<String>) -> Result<(), String> {
-    let guild_id = message.guild_id();
-    let mut tags = TAGS.get_possible_tags(guild_id);
-    let mut tags = tags.drain()
-        .map(|(k, _)| k)
-        .collect::<Vec<String>>();
-    tags.sort();
+command!(list(_ctx, msg, _args) {
+    let guild_id = msg.guild_id();
+    let mut tags = {
+        let mut tags = lock_mutex(&*TAGS)?.get_possible_tags(guild_id);
+        let mut tags = tags.drain()
+            .map(|(k, _)| k)
+            .collect::<Vec<String>>();
+        tags.sort();
+        tags
+    };
 
     let response = if tags.is_empty() {
         "No tags available.".to_owned()
     } else {
         format!("Available tags: {}", tags.join(", "))
     };
-    check_msg(context.say(&response));
+    check_msg(msg.channel_id.say(&response));
+});
 
-    Ok(())
-}
+command!(edit(_ctx, msg, args) {
+    let name = args.single::<String>()
+        .expect("Failed to parse command argument").trim().to_lowercase();
 
-pub fn edit(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
-    let mut args = args.into_iter();
+    let guild_id = msg.guild_id();
+    let mut tags = lock_mutex(&*TAGS)?;
+    let mut tag = tags.get_tag(guild_id, &name)?;
 
-    let name = match args.next() {
-        Some(name) => name,
-        None => return Err("Please specify a tag to edit.".to_owned()),
-    };
-
-    let name = name.trim().to_lowercase().to_owned();
-
-    let guild_id = message.guild_id();
-    let mut tag = match TAGS.get_tag(guild_id, name.clone()) {
-        Ok(tag) => tag,
-        Err(err) => return Err(err),
-    };
-
-    if !owner_check(message, &tag) {
-        return Err("You do not have permission to do that.".to_owned());
+    if !owner_check(msg, &tag) {
+        return Err(CommandError("You do not have permission to do that.".to_owned()));
     }
 
-    let content = args.collect::<Vec<String>>();
-    let content = if content.is_empty() {
-        return Err("Please specify some content for the tag.".to_owned());
+    let content = if args.is_empty() {
+        return Err(CommandError("Please specify some content for the tag.".to_owned()));
     } else {
-        content.join(" ")
+        args.join(" ")
     };
 
     tag.content = content;
-    TAGS.put_tag(guild_id, name.clone(), tag);
+    tags.put_tag(guild_id, name.clone(), tag);
 
-    check_msg(context.say(&format!("Tag \"{}\" successfully updated.", name)));
+    check_msg(msg.channel_id.say(&format!("Tag \"{}\" successfully updated.", name)));
+});
 
-    Ok(())
-}
+command!(delete(_ctx, msg, args) {
+    let name = args.single::<String>()
+        .expect("Failed to parse command argument").trim().to_lowercase();
 
-pub fn delete(context: &Context, message: &Message, args: Vec<String>) -> Result<(), String> {
-    let mut args = args.into_iter();
-
-    let name = match args.next() {
-        Some(name) => name,
-        None => return Err("Please specify a tag to delete.".to_owned()),
-    };
-
-    let name = name.trim().to_lowercase().to_owned();
-
-    let guild_id = message.guild_id();
-    let tag = match TAGS.get_tag(guild_id, name.clone()) {
+    let guild_id = msg.guild_id();
+    let mut tags = lock_mutex(&*TAGS)?;
+    let tag = match tags.get_tag(guild_id, &name) {
         Ok(tag) => tag,
-        Err(err) => return Err(err),
+        Err(err) => return Err(CommandError(err)),
     };
 
-    if !owner_check(message, &tag) {
-        return Err("You do not have permission to do that.".to_owned());
+    if !owner_check(msg, &tag) {
+        return Err(CommandError("You do not have permission to do that.".to_owned()));
     }
 
-    TAGS.delete_tag(guild_id, &name);
+    tags.delete_tag(guild_id, &name);
 
-    check_msg(context.say(&format!("Tag \"{}\" successfully deleted.", name)));
-
-    Ok(())
-}
+    check_msg(msg.channel_id.say(&format!("Tag \"{}\" successfully deleted.", name)));
+});
 
 // Denies certain tag names from being used as keys.
 fn verify_tag_name(name: &str) -> Result<(), String> {
@@ -394,8 +317,8 @@ fn verify_tag_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn owner_check(message: &Message, tag: &Tag) -> bool {
-    message.author.id == tag.owner_id
+fn owner_check(msg: &Message, tag: &Tag) -> bool {
+    msg.author.id == tag.owner_id
 }
 
 fn get_database_location(guild: Option<GuildId>) -> String {

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -13,11 +13,17 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::{ErrorKind, Read};
 
-#[cfg(feature = "nightly")]
-include!("config.in.rs");
-
-#[cfg(feature = "with-syntex")]
-include!(concat!(env!("OUT_DIR"), "/config.rs"));
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Config {
+    /// Name by which the bot is referred to internally (e.g. in debug output).
+    pub bot_name: String,
+    /// The command prefix for the bot.
+    pub command_prefix: String,
+    /// The URL for the source of the project.
+    pub source_url: String,
+    /// The authors to use in author checks for permissions.
+    pub owners: HashSet<u64>,
+}
 
 impl Config {
     pub fn new(name: Option<&str>) -> Self {

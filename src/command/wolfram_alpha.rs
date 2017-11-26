@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -9,46 +9,58 @@
 
 //! Provides the a command which allows a user to query the Wolfram|Alpha API.
 
-extern crate wolfram_alpha;
-
 use hyper::Client;
-use self::wolfram_alpha::Error as WolframError;
-use self::wolfram_alpha::model::{Pod, QueryResult};
+use hyper::client::HttpConnector;
+use hyper_tls::HttpsConnector;
 use serenity::utils::builder::{CreateEmbed, CreateEmbedField};
 use std::env;
 use std::error::Error as StdError;
-use util::{check_msg, random_colour, stringify};
+use std::str::FromStr;
+use tokio_core::reactor::Core;
+use util::{check_msg, new_core_and_client, random_colour, stringify};
+use wolfram_alpha::{self, Error as WolframError};
+use wolfram_alpha::model::{Pod, QueryResult};
 
 lazy_static! {
-    static ref PLUGIN: WolframPlugin = {
-        let api_app_id = env::var("WOLFRAM_ALPHA_API_APP_ID")
-            .expect("WOLFRAM_ALPHA_API_APP_ID env var not set");
-        WolframPlugin::new(api_app_id)
-    };
+    static ref API_APP_ID: String = env::var("WOLFRAM_ALPHA_API_APP_ID")
+        .expect("WOLFRAM_ALPHA_API_APP_ID env var not set");
+    static ref WOLFRAM_RESULT_SIMPLE_DISPLAY: bool =
+        env::var("WOLFRAM_RESULT_SIMPLE_DISPLAY")
+            .as_ref()
+            .map(|s| &s[..])
+            .map(bool::from_str)
+            .ok()
+            .and_then(Result::ok)
+            .unwrap_or(false);
 }
 
 pub struct WolframPlugin {
     app_id: String,
-    hyper_client: Client,
+    core: Core,
+    hyper_client: Client<HttpsConnector<HttpConnector>>,
 }
 
 impl WolframPlugin {
     /// Returns a new instance of `WolframPlugin`.
     pub fn new(wolfram_alpha_api_app_id: String) -> Self {
+        let (core, client) = new_core_and_client();
+
         WolframPlugin {
             app_id: wolfram_alpha_api_app_id,
-            hyper_client: Client::new(),
+            core,
+            hyper_client: client,
         }
     }
 
-    fn query(&self, args: &[String]) -> Result<QueryResult, String> {
+    fn query(&mut self, args: &[String]) -> Result<QueryResult, String> {
         let query = match args.len() {
             0 => return Err("Missing WolframAlpha query".to_owned()),
             _ => args.join(" "),
         };
         trace!("WolframAlpha query: {}", query);
 
-        match wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None) {
+        let res = self.core.run(wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None));
+        match res {
             Ok(query_result) => Ok(query_result),
             Err(e) => {
                 let description = match e {
@@ -61,23 +73,24 @@ impl WolframPlugin {
     }
 }
 
-command!(wolfram(context, message, args) {
-    context.broadcast_typing(message.channel_id).map_err(stringify)?;
+command!(wolfram(_ctx, msg, args) {
+    msg.channel_id.broadcast_typing().as_ref().map_err(stringify)?;
 
-    match PLUGIN.query(&args) {
+    let mut plugin = WolframPlugin::new(API_APP_ID.clone());
+
+    match plugin.query(&args) {
         Ok(query_result) => {
             if query_result.success {
                 // Format the `QueryResult` into Discord-ready output.
                 let colour = random_colour();
                 let pods = query_result.pod
                     .ok_or_else(|| "Result did not contain any parsable information")?;
-                check_msg(context.send_message(
-                    message.channel_id,
-                    |m| m.embed(|e| format_pods(&pods, e).colour(colour)),
+                check_msg(msg.channel_id.send_message(
+                    |m| m.embed(|e| format_pods(&pods, e, *WOLFRAM_RESULT_SIMPLE_DISPLAY).colour(colour)),
                 ));
             } else if let Some(didyoumeans) = query_result.didyoumeans {
                 let colour = random_colour();
-                check_msg(context.send_message(message.channel_id, |m| {
+                check_msg(msg.channel_id.send_message(|m| {
                     m.embed(|e| {
                         e.title("Query unsuccessful.")
                             .colour(colour)
@@ -94,7 +107,7 @@ command!(wolfram(context, message, args) {
                 }));
             } else if let Some(error) = query_result.error {
                 let colour = random_colour();
-                check_msg(context.send_message(message.channel_id, |m| {
+                check_msg(msg.channel_id.send_message(|m| {
                     m.embed(|e| {
                         e.title("Wolfram|Alpha returned an error.")
                             .colour(colour)
@@ -111,14 +124,17 @@ command!(wolfram(context, message, args) {
                     })
                 }));
             } else {
-                check_msg(context.say("Query was unsuccessful. Perhaps try rewording it?"));
+                check_msg(msg.channel_id.say("Query was unsuccessful. Perhaps try rewording it?"));
             }
         },
-        Err(err) => check_msg(context.say(err.as_ref())),
+        Err(err) => check_msg(msg.channel_id.say(err)),
     }
 });
 
-fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
+/// Formats pods to be displayed in a Discord embed.
+///
+/// If `simple` is set to `true`, the embed will only include the primary pod.
+fn format_pods(pods: &[Pod], embed: CreateEmbed, simple: bool) -> CreateEmbed {
     let mut iter = pods.iter();
 
     // First result is the interpretation.
@@ -127,56 +143,68 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed) -> CreateEmbed {
             .subpod[0]
         .plaintext
         .clone()
-        .unwrap_or("".to_owned());
+        .unwrap_or_else(String::new);
     let mut embed = embed.title("Input interpretation");
     embed = embed.description(&format!("`{}`", interpretation));
 
     if let Some(img) = pods.iter()
         .skip(1)
-        .filter_map(|p| p.subpod.iter().filter_map(|s| s.img.clone()).next())
-        .next() {
+        .filter_map(|p|
+            p.subpod.iter()
+                .filter(|s| {
+                    // Find all subpods that have a blank "plaintext" field.
+                    // This usually indicates they have an image which should be
+                    // displayed instead.
+                    match s.plaintext {
+                        Some(ref text) if text == "" || text == "\n" => true,
+                        _ => false,
+                    }
+                })
+                .filter_map(|s| s.img.clone())
+                .next()
+        )
+        .next()
+    {
         embed = embed.image(unescape(img.src.as_str()).as_ref());
     }
 
-    // If there is a primary pod, then only format and print that pod.
-    if let Some(pod) = pods.iter().find(|p| p.primary == Some(true)) {
-        embed = embed.field(|f| format_pod(pod, f));
-    } else {
-        // Parse all the remaining pods.
-        for pod in iter {
-            embed = embed.field(|f| format_pod(pod, f.inline(false)));
+    // If there is a primary pod, and we only want a simple display, then only
+    // format and print that pod.
+    if simple {
+        if let Some(pod) = pods.iter().find(|p| p.primary == Some(true)) {
+            return embed.field(|f| format_pod(pod, f));
         }
     }
 
-    embed
+    // Parse all the remaining pods.
+    pods.iter().fold(embed, |embed, pod| {
+        embed.field(|f| format_pod(pod, f))
+    })
 }
 
 fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
-    let f = f.name(pod.title.as_ref());
+    let f = f.name(&pod.title);
 
     trace!("Formatting {} subpods", pod.subpod.len());
     let mut result = String::new();
     for subpod in &pod.subpod {
         let text = match subpod.plaintext {
-            // If the text field is empty, add a message indicating as such
-            // (discord doesn't like empty/just newline fields).
-            Some(ref text) if text == "" || text == "\n" => "[No text]".to_owned(),
+            // If the text field exists, but is blank, we likely have an image
+            // we should display here instead (and Discord doesn't like
+            // empty/just newline fields in embeds anyways).
+            // However, image selection is done outside of this function, so we
+            // just ignore it.
+            Some(ref text) if text == "" || text == "\n" => {
+                "[No text]".to_owned()
+            },
             // Grab all the consecutive blobs of text.
             Some(ref text) => {
                 trace!("Adding text: {}", text);
                 text.to_owned()
             },
-            // If there's no text, then there's usually an image.
-            _ => {
-                match subpod.img {
-                    Some(ref img) => {
-                        let url = unescape(img.src.as_ref());
-                        trace!("Adding img src: {}", url);
-                        url
-                    },
-                    None => break,
-                }
-            },
+            // If there was no plaintext field and no image, we don't display
+            // anything.
+            None => break,
         };
 
         result.push_str(&format!("{}\n", &text));
@@ -189,7 +217,7 @@ fn format_pod(pod: &Pod, f: CreateEmbedField) -> CreateEmbedField {
         result.push_str(truncation_msg.as_str());
     }
 
-    f.value(result.as_ref())
+    f.value(result)
 }
 
 #[inline]

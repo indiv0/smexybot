@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -7,51 +7,66 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-extern crate psutil;
-
 use ::{CONFIG, UPTIME};
-use chrono::UTC;
+use chrono::{Duration, Utc};
+use psutil;
 use serenity::client::CACHE;
-use serenity::model::{Guild, GuildChannel, UserId};
+use serenity::framework::standard::CommandError;
+use serenity::model::{Guild, UserId};
+use std::sync::{Arc, RwLock};
 use util::{check_msg, duration_to_string, timestamp_to_string};
 
 const BYTES_TO_MEGABYTES: f64 = 1f64 / (1024f64 * 1024f64);
 
-command!(stats(context, message, _args) {
-    let current_time = UTC::now();
+command!(stats(_ctx, msg, _args) {
+    let current_time = Utc::now();
+
     let cache = match CACHE.read() {
         Ok(cache) => cache,
-        Err(_) => return Err("Failed to lock cache".to_owned()),
+        Err(why) => {
+            debug!("Failed to lock cache: {}", why);
+            return Err(CommandError("An internal error occurred".to_owned()));
+        },
     };
     let guilds = cache.guilds
         .values()
-        .collect::<Vec<&Guild>>();
+        .collect::<Vec<&Arc<RwLock<Guild>>>>();
     let guilds_count = guilds.len();
-    let channels = guilds.iter()
-        .flat_map(|g| g.channels.values())
-        .collect::<Vec<&GuildChannel>>();
-    let channels_count = channels.len();
-    let mut user_ids = guilds.iter()
-        .flat_map(|g| g.members.keys())
-        .collect::<Vec<&UserId>>();
+    let mut channels_count = 0;
+    let mut user_ids: Vec<UserId> = Vec::new();
+    for guild in guilds {
+        let guild = guild.read().expect("Failed to read RwLock");
+
+        channels_count += guild.channels.len();
+
+        let mut users = guild.members.keys().cloned().collect::<Vec<UserId>>();
+        user_ids.append(&mut users.clone());
+    }
     user_ids.sort();
     user_ids.dedup();
     let users_count = user_ids.len();
 
-    let uptime = current_time - *UPTIME;
+    let bot_uptime = current_time.signed_duration_since(*UPTIME);
+    let server_uptime = psutil::system::uptime();
 
     let processes = match psutil::process::all() {
         Ok(processes) => processes,
-        Err(_) => return Err("Failed to read process list".to_owned()),
+        Err(why) => {
+            debug!("Failed to read process list: {}", why);
+            return Err(CommandError("Failed to read process list".to_owned()));
+        },
     };
     let process = match processes.iter().find(|p| p.pid == psutil::getpid()) {
         Some(process) => process,
-        None => return Err("Failed to retrieve information on process".to_owned()),
+        None => return Err(CommandError("Failed to retrieve information on process".to_owned())),
     };
     let threads = process.num_threads;
     let memory = match process.memory() {
         Ok(memory) => memory,
-        Err(_) => return Err("Failed to retrieve process memory usage".to_owned()),
+        Err(why) => {
+            debug!("Failed to retrieve process memory usage: {}", why);
+            return Err(CommandError("Failed to retrieve process memory usage".to_owned()));
+        },
     };
 
     let total_mem;
@@ -64,12 +79,17 @@ command!(stats(context, message, _args) {
         shared_mem = memory.share as f64 * BYTES_TO_MEGABYTES;
     }
 
-    check_msg(context.send_message(message.channel_id, |m| {
+    check_msg(msg.channel_id.send_message(|m| {
         m.embed(|e| {
             e.title(&format!("{} stats", CONFIG.bot_name))
                 .field(|f| f.name("Members").value(&users_count.to_string()))
                 .field(|f| f.name("Channels").value(&channels_count.to_string()))
-                .field(|f| f.name("Uptime").value(&duration_to_string(&uptime)))
+                .field(|f| f.name("Uptime").value(
+                        &format!("Bot: {}\nServer: {}",
+                            duration_to_string(&bot_uptime, true),
+                            duration_to_string(&Duration::seconds(server_uptime as i64), true),
+                        )
+                ))
                 .field(|f| f.name("Servers").value(&guilds_count.to_string()))
                 .field(|f| f.name("Thread Count").value(&threads.to_string()))
                 .field(|f| {

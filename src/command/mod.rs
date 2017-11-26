@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -7,17 +7,9 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-#[cfg(feature = "fuyu")]
-pub mod fuyu;
-#[cfg(feature = "ping")]
 pub mod ping;
-#[cfg(feature = "roll")]
 pub mod roll;
-#[cfg(feature = "stats")]
 pub mod stats;
-#[cfg(feature = "tag")]
 pub mod tag;
-#[cfg(feature = "wolfram")]
 pub mod wolfram_alpha;
-#[cfg(feature = "xkcd")]
 pub mod xkcd;

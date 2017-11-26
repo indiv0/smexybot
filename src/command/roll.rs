@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Nikita Pekin and the smexybot contributors
+// Copyright (c) 2016-2017 Nikita Pekin and the smexybot contributors
 // See the README.md file at the top-level directory of this distribution.
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -9,85 +9,87 @@
 
 //! Provides functionality for the `!roll` command.
 
-extern crate regex;
-
 use rand::{self, Rng};
-use self::regex::Regex;
+use regex::Regex;
 
 use util::check_msg;
 
 lazy_static! {
-    static ref DICE_ROLL_REGEX: Regex = Regex::new(r"^(\d*)d(\d*)").unwrap();
+    static ref DICE_ROLL_REGEX: Regex = Regex::new(r"^(\d*)d(\d*)")
+        .expect("Failed to construct regex");
 }
 
-command!(roll(context, _message, args) {
-    const ERROR_MESSAGE: &'static str = "Please specify a roll in the form XdY (e.g. 2d6)";
+command!(roll(_ctx, msg, args) {
+    const ERROR_MESSAGE: &str = "Please specify a roll in the form XdY (e.g. 2d6)";
 
     trace!("Received roll command with args: {:?}", args);
-    let arg = match args.iter().next() {
-        Some(arg) => arg,
-        None => {
-            check_msg(context.say(ERROR_MESSAGE));
+    let arg = match args.single::<String>() {
+        Ok(arg) => arg,
+        Err(why) => {
+            debug!("Failed to parse command arg: {}", why);
+            check_msg(msg.channel_id.say(ERROR_MESSAGE));
             return Ok(());
         },
     };
 
-    let mut captures = DICE_ROLL_REGEX.captures_iter(arg);
+    let mut captures = DICE_ROLL_REGEX.captures_iter(&arg);
     let next_capture = captures.next();
     let (number_of_dice, die_sides) = match next_capture {
         Some(capture) => {
-            let number_of_dice = match capture.at(1) {
+            let number_of_dice = match capture.get(1) {
                 Some(number_of_dice) => {
-                    match number_of_dice.parse::<u32>() {
+                    match number_of_dice.as_str().parse::<u32>() {
                         Ok(number_of_dice) => number_of_dice,
                         _ => {
-                            check_msg(context.say(ERROR_MESSAGE));
+                            check_msg(msg.channel_id.say(ERROR_MESSAGE));
                             return Ok(());
                         },
                     }
                 },
                 _ => {
-                    check_msg(context.say(ERROR_MESSAGE));
+                    check_msg(msg.channel_id.say(ERROR_MESSAGE));
                     return Ok(());
                 },
             };
 
-            let die_sides = match capture.at(2) {
+            let die_sides = match capture.get(2) {
                 Some(die_sides) => {
-                    match die_sides.parse::<u32>() {
+                    match die_sides.as_str().parse::<u32>() {
                         Ok(0) => {
-                            check_msg(context.say("Number of die sides cannot be 0."));
+                            check_msg(msg.channel_id.say("Number of die sides cannot be 0."));
                             return Ok(());
                         },
-                        Ok(4294967295) => {
-                            check_msg(context.say("Number of die sides is too large"));
+                        // TODO: replace this with a non-magic variable.
+                        Ok(4_294_967_295) => {
+                            check_msg(msg.channel_id.say("Number of die sides is too large"));
                             return Ok(());
                         },
                         Ok(die_sides) => die_sides,
                         _ => {
-                            check_msg(context.say(ERROR_MESSAGE));
+                            check_msg(msg.channel_id.say(ERROR_MESSAGE));
                             return Ok(());
                         },
                     }
                 },
                 _ => {
-                    check_msg(context.say(ERROR_MESSAGE));
+                    check_msg(msg.channel_id.say(ERROR_MESSAGE));
                     return Ok(());
                 },
             };
 
-            assert!(die_sides > 0 && die_sides < 4294967295);
+            // TODO: replace this with a non-magic variable.
+            assert!(die_sides > 0 && die_sides < 4_294_967_295);
 
             (number_of_dice, die_sides)
         },
         _ => {
-            check_msg(context.say(ERROR_MESSAGE));
+            check_msg(msg.channel_id.say(ERROR_MESSAGE));
             return Ok(());
         },
     };
 
     if number_of_dice == 0 {
-        check_msg(context.say("Number of dice cannot be 0"));
+        check_msg(msg.channel_id.say("Number of dice cannot be 0"));
         return Ok(());
     }
 
@@ -109,5 +111,5 @@ command!(roll(context, _message, args) {
         _ => format!("{} = {}", roll_string, sum),
     };
 
-    check_msg(context.say(response.as_ref()));
+    check_msg(msg.channel_id.say(response));
 });
