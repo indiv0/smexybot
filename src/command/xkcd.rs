@@ -20,7 +20,7 @@ use std::env;
 use std::str::{self, FromStr};
 use tokio_core::reactor::Core;
 use url::Url;
-use util::check_msg;
+use util::{check_msg, new_core_and_client};
 use xkcd;
 
 lazy_static! {
@@ -54,10 +54,7 @@ struct XkcdPlugin<C> {
 impl XkcdPlugin<HttpsConnector<HttpConnector>> {
     /// Returns a new instance of `XkcdPlugin`.
     fn new(google_custom_search_api_key: String, google_custom_search_engine_id: String) -> Self {
-        let core = Core::new().unwrap();
-        let client = Client::configure()
-            .connector(HttpsConnector::new(4, &core.handle()).unwrap())
-            .build(&core.handle());
+        let (core, client) = new_core_and_client();
 
         XkcdPlugin {
             core: core,

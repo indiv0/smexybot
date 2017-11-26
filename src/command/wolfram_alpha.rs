@@ -17,7 +17,7 @@ use std::env;
 use std::error::Error as StdError;
 use std::str::FromStr;
 use tokio_core::reactor::Core;
-use util::{check_msg, random_colour, stringify};
+use util::{check_msg, new_core_and_client, random_colour, stringify};
 use wolfram_alpha::{self, Error as WolframError};
 use wolfram_alpha::model::{Pod, QueryResult};
 
@@ -43,10 +43,7 @@ pub struct WolframPlugin {
 impl WolframPlugin {
     /// Returns a new instance of `WolframPlugin`.
     pub fn new(wolfram_alpha_api_app_id: String) -> Self {
-        let core = Core::new().unwrap();
-        let client = Client::configure()
-            .connector(HttpsConnector::new(4, &core.handle()).unwrap())
-            .build(&core.handle());
+        let (core, client) = new_core_and_client();
 
         WolframPlugin {
             app_id: wolfram_alpha_api_app_id,

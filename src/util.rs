@@ -8,6 +8,9 @@
 // except according to those terms.
 
 use chrono::{DateTime, Duration, Utc};
+use hyper::Client;
+use hyper::client::HttpConnector;
+use hyper_tls::HttpsConnector;
 use rand::{self, Rng};
 use serenity::Result as SerenityResult;
 use serenity::model::Message;
@@ -17,6 +20,7 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::{Mutex, MutexGuard};
+use tokio_core::reactor::Core;
 
 /// Checks that a message successfully sent; if not, then logs why.
 #[inline]
@@ -89,6 +93,18 @@ pub fn stringify<E>(error: &E) -> String
 #[inline]
 pub fn lock_mutex<T>(mutex: &Mutex<T>) -> Result<MutexGuard<T>, String> {
     mutex.lock().map_err(|_| "Error: an internal error occurred, please report this.".to_owned())
+}
+
+/// Initialize a Tokio reactor `Core` and use it to create a TLS hyper `Client`,
+///
+/// Returns a Tokio `Core` and a hyper `Client`.
+pub fn new_core_and_client() -> (Core, Client<HttpsConnector<HttpConnector>>) {
+    let core = Core::new().expect("Failed to create Tokio Core");
+    let client = Client::configure()
+        .connector(HttpsConnector::new(4, &core.handle()).expect("Failed to create HttpsConnector"))
+        .build(&core.handle());
+
+    (core, client)
 }
 
 /// Take two numbers as arguments and return a pair of numbers consisting of
