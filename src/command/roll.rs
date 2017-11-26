@@ -15,11 +15,12 @@ use regex::Regex;
 use util::check_msg;
 
 lazy_static! {
-    static ref DICE_ROLL_REGEX: Regex = Regex::new(r"^(\d*)d(\d*)").unwrap();
+    static ref DICE_ROLL_REGEX: Regex = Regex::new(r"^(\d*)d(\d*)")
+        .expect("Failed to construct regex");
 }
 
 command!(roll(_ctx, msg, args) {
-    const ERROR_MESSAGE: &'static str = "Please specify a roll in the form XdY (e.g. 2d6)";
+    const ERROR_MESSAGE: &str = "Please specify a roll in the form XdY (e.g. 2d6)";
 
     trace!("Received roll command with args: {:?}", args);
     let arg = match args.single::<String>() {
@@ -58,7 +59,8 @@ command!(roll(_ctx, msg, args) {
                             check_msg(msg.channel_id.say("Number of die sides cannot be 0."));
                             return Ok(());
                         },
-                        Ok(4294967295) => {
+                        // TODO: replace this with a non-magic variable.
+                        Ok(4_294_967_295) => {
                             check_msg(msg.channel_id.say("Number of die sides is too large"));
                             return Ok(());
                         },
@@ -75,7 +77,8 @@ command!(roll(_ctx, msg, args) {
                 },
             };
 
-            assert!(die_sides > 0 && die_sides < 4294967295);
+            // TODO: replace this with a non-magic variable.
+            assert!(die_sides > 0 && die_sides < 4_294_967_295);
 
             (number_of_dice, die_sides)
         },

@@ -35,7 +35,7 @@ command!(stats(_ctx, msg, _args) {
     let mut channels_count = 0;
     let mut user_ids: Vec<UserId> = Vec::new();
     for guild in guilds {
-        let guild = guild.read().unwrap();
+        let guild = guild.read().expect("Failed to read RwLock");
 
         channels_count += guild.channels.len();
 

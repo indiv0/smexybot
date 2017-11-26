@@ -69,18 +69,16 @@ pub fn duration_to_string(duration: &Duration, brief: bool) -> String {
         } else {
             format!("{}h {}m {}s", hours, minutes, seconds)
         }
+    } else if days > 0 {
+        format!("{} days {} hours {} minutes {} seconds", days, hours, minutes, seconds)
     } else {
-        if days > 0 {
-            format!("{} days {} hours {} minutes {} seconds", days, hours, minutes, seconds)
-        } else {
-            format!("{} hours {} minutes {} seconds", hours, minutes, seconds)
-        }
+        format!("{} hours {} minutes {} seconds", hours, minutes, seconds)
     }
 }
 
 /// Converts an error which implements the `Debug` trait into a `String`.
 #[inline]
-pub fn stringify<E>(error: E) -> String
+pub fn stringify<E>(error: &E) -> String
     where E: Debug + Error,
 {
     format!("Error: {:?}", error)

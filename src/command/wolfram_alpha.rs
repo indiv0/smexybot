@@ -62,7 +62,8 @@ impl WolframPlugin {
         };
         trace!("WolframAlpha query: {}", query);
 
-        let res = match self.core.run(wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None)) {
+        let res = self.core.run(wolfram_alpha::query::query(&self.hyper_client, &self.app_id, &query, None));
+        match res {
             Ok(query_result) => Ok(query_result),
             Err(e) => {
                 let description = match e {
@@ -71,14 +72,12 @@ impl WolframPlugin {
                 };
                 Err(format!("Failed to query WolframAlpha: {}", description))
             },
-        };
-
-        res
+        }
     }
 }
 
 command!(wolfram(_ctx, msg, args) {
-    msg.channel_id.broadcast_typing().map_err(stringify)?;
+    msg.channel_id.broadcast_typing().as_ref().map_err(stringify)?;
 
     let mut plugin = WolframPlugin::new(API_APP_ID.clone());
 
@@ -147,7 +146,7 @@ fn format_pods(pods: &[Pod], embed: CreateEmbed, simple: bool) -> CreateEmbed {
             .subpod[0]
         .plaintext
         .clone()
-        .unwrap_or("".to_owned());
+        .unwrap_or_else(String::new);
     let mut embed = embed.title("Input interpretation");
     embed = embed.description(&format!("`{}`", interpretation));
 

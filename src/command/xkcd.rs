@@ -25,12 +25,13 @@ use xkcd;
 
 lazy_static! {
     static ref GOOGLE_CSE_URL: Url = "https://www.googleapis.com/customsearch/v1".parse::<Url>()
-        .unwrap();
+        .expect("Failed to parse URL");
     static ref CSE_API_KEY: String = env::var("GOOGLE_XKCD_CUSTOM_SEARCH_API_KEY")
-            .expect("GOOGLE_XKCD_CUSTOM_SEARCH_API_KEY env var not set.");
+        .expect("GOOGLE_XKCD_CUSTOM_SEARCH_API_KEY env var not set.");
     static ref CSE_ENGINE_ID: String = env::var("GOOGLE_XKCD_CUSTOM_SEARCH_ENGINE_ID")
-            .expect("GOOGLE_XKCD_CUSTOM_SEARCH_ENGINE_ID env var not set.");
-    static ref XKCD_URL_REGEX: Regex = Regex::new(r"^https://xkcd.com/(\d*)").unwrap();
+        .expect("GOOGLE_XKCD_CUSTOM_SEARCH_ENGINE_ID env var not set.");
+    static ref XKCD_URL_REGEX: Regex = Regex::new(r"^https://xkcd.com/(\d*)")
+        .expect("Failed to create regex");
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,7 +72,7 @@ impl XkcdPlugin<HttpsConnector<HttpConnector>> {
         self.core.run(xkcd::random::random(&self.hyper_client))
             .ok()
             .map(|comic| comic.img.into_string())
-            .unwrap_or("Failed to retrieve random comic".to_owned())
+            .unwrap_or_else(|| "Failed to retrieve random comic".to_owned())
     }
 
     fn search(&mut self, args: &[String]) -> String {

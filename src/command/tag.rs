@@ -61,7 +61,7 @@ impl Tag {
                 let owner_id = UserId(self.owner_id);
                 let (name, avatar_url) = match owner_id.find() {
                     Some(user) => {
-                        let user = user.read().unwrap();
+                        let user = user.read().expect("Failed to read RwLock");
                         (user.name.clone(), user.avatar_url())
                     },
                     None => {
@@ -135,9 +135,9 @@ impl Tags<Key, Value, TagStore> {
         Ok(())
     }
 
-    fn get_tag(&self, guild: Option<GuildId>, name: String) -> Result<Tag, String> {
+    fn get_tag(&self, guild: Option<GuildId>, name: &str) -> Result<Tag, String> {
         self.get_possible_tags(guild)
-            .get(&name)
+            .get(name)
             .cloned()
             .ok_or_else(|| "Tag not found".to_owned())
     }
@@ -176,7 +176,7 @@ command!(tag(ctx, msg, args) {
 
                 let lookup = name.to_lowercase();
                 let mut tags = lock_mutex(&*TAGS)?;
-                match tags.get_tag(guild_id, lookup.clone()) {
+                match tags.get_tag(guild_id, &lookup) {
                     Ok(tag) => {
                         let mut tag = tag.clone();
                         let content = tag.content.clone();
@@ -202,7 +202,8 @@ command!(tag(ctx, msg, args) {
 });
 
 command!(create(_ctx, msg, args) {
-    let name = args.single::<String>().unwrap();
+    let name = args.single::<String>()
+        .expect("Failed to read command argument");
 
     let content = if args.is_empty() {
         return Err(CommandError("Please specify some content for the tag.".to_owned()));
@@ -230,11 +231,12 @@ command!(create(_ctx, msg, args) {
 });
 
 command!(info(_ctx, msg, args) {
-    let name = args.single::<String>().unwrap();
+    let name = args.single::<String>()
+        .expect("Failed to read command argument");
 
     let name = name.trim().to_lowercase().to_owned();
     let guild_id = msg.guild_id();
-    let tag = lock_mutex(&*TAGS)?.get_tag(guild_id, name)?;
+    let tag = lock_mutex(&*TAGS)?.get_tag(guild_id, &name)?;
 
     check_msg(msg.channel_id.send_message(|m| m.embed(|e| tag.as_embed(e))));
 });
@@ -259,11 +261,12 @@ command!(list(_ctx, msg, _args) {
 });
 
 command!(edit(_ctx, msg, args) {
-    let name = args.single::<String>().unwrap().trim().to_lowercase();
+    let name = args.single::<String>()
+        .expect("Failed to parse command argument").trim().to_lowercase();
 
     let guild_id = msg.guild_id();
     let mut tags = lock_mutex(&*TAGS)?;
-    let mut tag = tags.get_tag(guild_id, name.clone())?;
+    let mut tag = tags.get_tag(guild_id, &name)?;
 
     if !owner_check(msg, &tag) {
         return Err(CommandError("You do not have permission to do that.".to_owned()));
@@ -282,11 +285,12 @@ command!(edit(_ctx, msg, args) {
 });
 
 command!(delete(_ctx, msg, args) {
-    let name = args.single::<String>().unwrap().trim().to_lowercase();
+    let name = args.single::<String>()
+        .expect("Failed to parse command argument").trim().to_lowercase();
 
     let guild_id = msg.guild_id();
     let mut tags = lock_mutex(&*TAGS)?;
-    let tag = match tags.get_tag(guild_id, name.clone()) {
+    let tag = match tags.get_tag(guild_id, &name) {
         Ok(tag) => tag,
         Err(err) => return Err(CommandError(err)),
     };
